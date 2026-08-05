@@ -310,12 +310,170 @@
     text-align: center;
     line-height: 1.5;
   }
+
+  /* Presets */
+  .presets-bar {
+    margin-bottom: 20px;
+    padding: 14px;
+    background: #222;
+    border: 1px solid #333;
+    border-radius: 8px;
+  }
+
+  .presets-bar h2 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #E8423F;
+    margin-bottom: 10px;
+  }
+
+  .presets-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .presets-row select {
+    flex: 1;
+    padding: 6px 10px;
+    background: #1a1a1a;
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: #eee;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .presets-row button,
+  .presets-save-row button {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  .presets-row .btn-load {
+    background: #E8423F;
+    color: white;
+  }
+  .presets-row .btn-load:hover { background: #ff5a57; }
+  .presets-row .btn-load:disabled { background: #555; color: #999; cursor: not-allowed; }
+
+  .presets-row .btn-delete {
+    background: #444;
+    color: #ccc;
+  }
+  .presets-row .btn-delete:hover { background: #633; color: #faa; }
+  .presets-row .btn-delete:disabled { background: #333; color: #666; cursor: not-allowed; }
+
+  .presets-save-row {
+    display: flex;
+    gap: 6px;
+  }
+
+  .presets-save-row input {
+    flex: 1;
+    padding: 6px 10px;
+    background: #1a1a1a;
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: #eee;
+    font-size: 13px;
+  }
+
+  .presets-save-row .btn-save {
+    background: #2a7a3a;
+    color: white;
+  }
+  .presets-save-row .btn-save:hover { background: #3a9a4a; }
+
+  /* Confirm dialog */
+  #confirm-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  #confirm-overlay.active { display: flex; }
+
+  .confirm-box {
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 10px;
+    padding: 28px 32px;
+    max-width: 360px;
+    text-align: center;
+  }
+
+  .confirm-box p {
+    font-size: 15px;
+    color: #ddd;
+    margin-bottom: 8px;
+  }
+
+  .confirm-box .preset-name {
+    font-weight: 700;
+    color: #E8423F;
+    font-size: 16px;
+    margin-bottom: 20px;
+  }
+
+  .confirm-box .confirm-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+
+  .confirm-box .confirm-buttons button {
+    padding: 8px 24px;
+    border: none;
+    border-radius: 5px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+
+  .confirm-box .btn-confirm-delete {
+    background: #c0392b;
+    color: white;
+  }
+  .confirm-box .btn-confirm-delete:hover { background: #e74c3c; }
+
+  .confirm-box .btn-cancel {
+    background: #444;
+    color: #ccc;
+  }
+  .confirm-box .btn-cancel:hover { background: #555; }
 </style>
 </head>
 <body>
 
 <div id="sidebar">
   <h1>Animation Editor</h1>
+
+  <!-- PRESETS -->
+  <div class="presets-bar">
+    <h2>Saved Layouts</h2>
+    <div class="presets-row">
+      <select id="preset-list"><option value="">— no saved layouts —</option></select>
+      <button class="btn-load" id="btn-preset-load" disabled>Load</button>
+      <button class="btn-delete" id="btn-preset-delete" disabled>Delete</button>
+    </div>
+    <div class="presets-save-row">
+      <input type="text" id="preset-name" placeholder="Layout name...">
+      <button class="btn-save" id="btn-preset-save">Save</button>
+    </div>
+  </div>
 
   <!-- GLOBAL -->
   <div class="section">
@@ -875,6 +1033,187 @@ function formatTime(sec) {
   const s = sec % 60;
   return m + ':' + String(s).padStart(2, '0');
 }
+
+// --- PRESETS (localStorage) ---
+const STORAGE_KEY = 'version1_presets';
+
+function getPresets() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+  } catch { return {}; }
+}
+
+function savePresets(presets) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
+}
+
+function refreshPresetList() {
+  const presets = getPresets();
+  const select = document.getElementById('preset-list');
+  const names = Object.keys(presets).sort();
+  select.innerHTML = '';
+  if (names.length === 0) {
+    select.innerHTML = '<option value="">— no saved layouts —</option>';
+  } else {
+    select.innerHTML = '<option value="">— select a layout —</option>';
+    names.forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      select.appendChild(opt);
+    });
+  }
+  document.getElementById('btn-preset-load').disabled = true;
+  document.getElementById('btn-preset-delete').disabled = true;
+}
+
+document.getElementById('preset-list').addEventListener('change', (e) => {
+  const hasSelection = e.target.value !== '';
+  document.getElementById('btn-preset-load').disabled = !hasSelection;
+  document.getElementById('btn-preset-delete').disabled = !hasSelection;
+});
+
+// Save
+document.getElementById('btn-preset-save').addEventListener('click', () => {
+  let name = document.getElementById('preset-name').value.trim();
+  if (!name) {
+    document.getElementById('preset-name').focus();
+    return;
+  }
+  const presets = getPresets();
+  presets[name] = gatherConfig();
+  savePresets(presets);
+  refreshPresetList();
+  document.getElementById('preset-list').value = name;
+  document.getElementById('btn-preset-load').disabled = false;
+  document.getElementById('btn-preset-delete').disabled = false;
+  document.getElementById('preset-name').value = '';
+});
+
+// Load
+document.getElementById('btn-preset-load').addEventListener('click', () => {
+  const name = document.getElementById('preset-list').value;
+  if (!name) return;
+  const presets = getPresets();
+  const config = presets[name];
+  if (!config) return;
+  applyConfigToForm(config);
+  sendConfig();
+});
+
+function applyConfigToForm(c) {
+  if (c.global) {
+    document.getElementById('global-duration').value = c.global.duration || 16000;
+    document.getElementById('global-bpm').value = c.global.bpm || 124;
+  }
+  if (c.mainLogo) {
+    document.getElementById('mainLogo-yPosition').value = c.mainLogo.yPosition ?? 0.5;
+    document.getElementById('mainLogo-size').value = c.mainLogo.size ?? 0.82;
+    document.getElementById('mainLogo-fadeInTime').value = c.mainLogo.fadeInTime ?? 960;
+    document.getElementById('mainLogo-fadeOutTime').value = c.mainLogo.fadeOutTime ?? 800;
+    document.getElementById('mainLogo-parallax').checked = c.mainLogo.parallax !== false;
+    document.getElementById('mainLogo-parallaxStartY').value = c.mainLogo.parallaxStartY ?? -0.3;
+    document.getElementById('mainLogo-parallaxDuration').value = c.mainLogo.parallaxDuration ?? 3000;
+  }
+  if (c.pulsingLogo) {
+    document.getElementById('pulsingLogo-enabled').checked = c.pulsingLogo.enabled !== false;
+    document.getElementById('pulsingLogo-yPosition').value = c.pulsingLogo.yPosition ?? 0.34;
+    document.getElementById('pulsingLogo-startTime').value = c.pulsingLogo.startTime ?? 10000;
+    document.getElementById('pulsingLogo-opacity').value = c.pulsingLogo.opacity ?? 0.85;
+    document.getElementById('pulsingLogo-maxScale').value = c.pulsingLogo.maxScale ?? 2.0;
+  }
+  if (c.djText) {
+    document.getElementById('djText-text').value = c.djText.text || "DJ's moss_b & TonyT";
+    document.getElementById('djText-yPosition').value = c.djText.yPosition ?? 0.72;
+    document.getElementById('djText-fontSize').value = c.djText.fontSize ?? 64;
+    document.getElementById('djText-fadeInTime').value = c.djText.fadeInTime ?? 5000;
+    if (c.djText.fontFamily) {
+      const djSel = document.getElementById('djText-font');
+      const match = Array.from(djSel.options).find(o => o.value === c.djText.fontFamily);
+      djSel.value = match ? c.djText.fontFamily : djSel.options[0].value;
+      document.getElementById('djText-upload-field').style.display = 'none';
+    }
+  }
+  if (c.textBox) {
+    document.getElementById('textBox-enabled').checked = c.textBox.enabled !== false;
+    document.getElementById('textBox-text').value = c.textBox.text || '';
+    document.getElementById('textBox-yPosition').value = c.textBox.yPosition ?? 0.88;
+    document.getElementById('textBox-fontSize').value = c.textBox.fontSize ?? 42;
+    document.getElementById('textBox-borderWidth').value = c.textBox.borderWidth ?? 3;
+    document.getElementById('textBox-cornerRadius').value = c.textBox.cornerRadius ?? 12;
+    document.getElementById('textBox-fadeInTime').value = c.textBox.fadeInTime ?? 7000;
+    if (c.textBox.fontFamily) {
+      const tbSel = document.getElementById('textBox-font');
+      const match = Array.from(tbSel.options).find(o => o.value === c.textBox.fontFamily);
+      tbSel.value = match ? c.textBox.fontFamily : tbSel.options[0].value;
+      document.getElementById('textBox-upload-field').style.display = 'none';
+    }
+  }
+  if (c.spectrum) {
+    document.getElementById('spectrum-height').value = c.spectrum.height ?? 900;
+    document.getElementById('spectrum-bottomOffset').value = c.spectrum.bottomOffset ?? 40;
+    document.getElementById('spectrum-barCount').value = c.spectrum.barCount ?? 32;
+  }
+  if (c.waveform) {
+    document.getElementById('waveform-yCenter').value = c.waveform.yCenter ?? 0.61;
+    document.getElementById('waveform-height').value = c.waveform.height ?? 1200;
+    document.getElementById('waveform-lineWidth').value = c.waveform.lineWidth ?? 6;
+  }
+  if (c.effects) {
+    document.getElementById('effects-glitch').checked = c.effects.glitch !== false;
+    document.getElementById('effects-scanlines').checked = c.effects.scanlines !== false;
+    document.getElementById('effects-grid').checked = c.effects.grid !== false;
+    document.getElementById('effects-sweeps').checked = c.effects.sweeps !== false;
+    document.getElementById('effects-cornerAccents').checked = c.effects.cornerAccents !== false;
+    document.getElementById('effects-vignette').checked = c.effects.vignette !== false;
+  }
+  // Refresh range value displays
+  document.querySelectorAll('input[type="range"]').forEach(range => {
+    const valSpan = document.getElementById(range.id + '-val');
+    if (valSpan) valSpan.textContent = parseFloat(range.value).toFixed(2);
+  });
+}
+
+// Delete (with confirmation)
+let pendingDeleteName = null;
+
+document.getElementById('btn-preset-delete').addEventListener('click', () => {
+  const name = document.getElementById('preset-list').value;
+  if (!name) return;
+  pendingDeleteName = name;
+  document.getElementById('confirm-preset-name').textContent = name;
+  document.getElementById('confirm-overlay').classList.add('active');
+});
+
+document.getElementById('btn-confirm-yes').addEventListener('click', () => {
+  if (pendingDeleteName) {
+    const presets = getPresets();
+    delete presets[pendingDeleteName];
+    savePresets(presets);
+    refreshPresetList();
+    pendingDeleteName = null;
+  }
+  document.getElementById('confirm-overlay').classList.remove('active');
+});
+
+document.getElementById('btn-confirm-no').addEventListener('click', () => {
+  pendingDeleteName = null;
+  document.getElementById('confirm-overlay').classList.remove('active');
+});
+
+// Init preset list on load
+refreshPresetList();
 </script>
+
+<div id="confirm-overlay">
+  <div class="confirm-box">
+    <p>Delete this layout?</p>
+    <div class="preset-name" id="confirm-preset-name"></div>
+    <div class="confirm-buttons">
+      <button class="btn-confirm-delete" id="btn-confirm-yes">Delete</button>
+      <button class="btn-cancel" id="btn-confirm-no">Cancel</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
