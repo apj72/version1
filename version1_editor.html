@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>VERSION 1 - Animation Editor</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #111;
+    color: #ddd;
+    height: 100vh;
+    display: flex;
+    overflow: hidden;
+  }
+
+  #sidebar {
+    width: 420px;
+    min-width: 420px;
+    background: #1a1a1a;
+    border-right: 1px solid #333;
+    overflow-y: auto;
+    padding: 20px;
+  }
+
+  #sidebar h1 {
+    font-size: 18px;
+    color: #E8423F;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .section {
+    margin-bottom: 24px;
+    border: 1px solid #333;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .section-header {
+    background: #222;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #E8423F;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .section-header:hover { background: #2a2a2a; }
+
+  .section-header::after {
+    content: '\25B2';
+    font-size: 10px;
+    transition: transform 0.2s;
+  }
+
+  .section.collapsed .section-header::after {
+    transform: rotate(180deg);
+  }
+
+  .section.collapsed .section-body { display: none; }
+
+  .section-body { padding: 12px 14px; }
+
+  .field {
+    margin-bottom: 12px;
+  }
+
+  .field label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #888;
+    margin-bottom: 4px;
+  }
+
+  .field input[type="text"],
+  .field input[type="number"] {
+    width: 100%;
+    padding: 6px 10px;
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: #eee;
+    font-size: 14px;
+  }
+
+  .field input[type="range"] {
+    width: 100%;
+    accent-color: #E8423F;
+  }
+
+  .field .range-value {
+    display: inline-block;
+    font-size: 12px;
+    color: #aaa;
+    min-width: 50px;
+    text-align: right;
+    float: right;
+    margin-top: -18px;
+  }
+
+  .field input[type="checkbox"] {
+    accent-color: #E8423F;
+    width: 18px;
+    height: 18px;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+
+  .field .checkbox-label {
+    font-size: 13px;
+    color: #ccc;
+    vertical-align: middle;
+  }
+
+  .field input:focus {
+    outline: none;
+    border-color: #E8423F;
+  }
+
+  #preview-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #000;
+  }
+
+  #preview-area iframe {
+    flex: 1;
+    border: none;
+    width: 100%;
+  }
+
+  #button-bar {
+    display: flex;
+    gap: 12px;
+    padding: 16px 20px;
+    background: #1a1a1a;
+    border-top: 1px solid #333;
+  }
+
+  #button-bar button {
+    padding: 10px 28px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: background 0.2s;
+  }
+
+  #btn-update {
+    background: #E8423F;
+    color: white;
+  }
+  #btn-update:hover { background: #ff5a57; }
+
+  #btn-download {
+    background: #333;
+    color: #ddd;
+  }
+  #btn-download:hover { background: #444; }
+
+  #btn-reset {
+    background: #222;
+    color: #888;
+    margin-left: auto;
+  }
+  #btn-reset:hover { background: #333; color: #aaa; }
+
+  #btn-record {
+    background: #c0392b;
+    color: white;
+  }
+  #btn-record:hover { background: #e74c3c; }
+  #btn-record:disabled {
+    background: #555;
+    color: #999;
+    cursor: not-allowed;
+  }
+
+  #record-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  #record-controls label {
+    font-size: 12px;
+    color: #aaa;
+    white-space: nowrap;
+  }
+
+  #record-controls input {
+    width: 50px;
+    padding: 4px 6px;
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: #eee;
+    font-size: 13px;
+    text-align: center;
+  }
+
+  #recording-overlay {
+    display: none;
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+
+  #recording-overlay.active { display: flex; }
+
+  #recording-overlay .rec-icon {
+    width: 16px;
+    height: 16px;
+    background: #E8423F;
+    border-radius: 50%;
+    animation: pulse-rec 1s ease-in-out infinite;
+    margin-bottom: 16px;
+  }
+
+  @keyframes pulse-rec {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  #recording-overlay .rec-label {
+    font-size: 18px;
+    color: #fff;
+    margin-bottom: 20px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  #recording-overlay .progress-bar {
+    width: 300px;
+    height: 6px;
+    background: #333;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+
+  #recording-overlay .progress-fill {
+    height: 100%;
+    background: #E8423F;
+    width: 0%;
+    transition: width 0.3s linear;
+    border-radius: 3px;
+  }
+
+  #recording-overlay .rec-time {
+    font-size: 13px;
+    color: #888;
+  }
+
+  #recording-overlay .rec-note {
+    font-size: 11px;
+    color: #666;
+    margin-top: 16px;
+    max-width: 320px;
+    text-align: center;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <h1>Animation Editor</h1>
+
+  <!-- GLOBAL -->
+  <div class="section">
+    <div class="section-header">Global</div>
+    <div class="section-body">
+      <div class="field">
+        <label>Loop Duration (ms)</label>
+        <input type="number" id="global-duration" value="16000" min="4000" max="120000" step="1000">
+      </div>
+      <div class="field">
+        <label>BPM</label>
+        <input type="number" id="global-bpm" value="124" min="60" max="200" step="1">
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN LOGO -->
+  <div class="section">
+    <div class="section-header">Main Logo</div>
+    <div class="section-body">
+      <div class="field">
+        <label>Y Position</label>
+        <input type="range" id="mainLogo-yPosition" min="0.1" max="0.9" step="0.01" value="0.5">
+        <span class="range-value" id="mainLogo-yPosition-val">0.50</span>
+      </div>
+      <div class="field">
+        <label>Size</label>
+        <input type="range" id="mainLogo-size" min="0.3" max="1.0" step="0.01" value="0.82">
+        <span class="range-value" id="mainLogo-size-val">0.82</span>
+      </div>
+      <div class="field">
+        <label>Fade In (ms)</label>
+        <input type="number" id="mainLogo-fadeInTime" value="960" min="100" max="5000" step="100">
+      </div>
+      <div class="field">
+        <label>Fade Out (ms)</label>
+        <input type="number" id="mainLogo-fadeOutTime" value="800" min="100" max="5000" step="100">
+      </div>
+      <div class="field">
+        <input type="checkbox" id="mainLogo-parallax" checked>
+        <span class="checkbox-label">Parallax entrance</span>
+      </div>
+      <div class="field">
+        <label>Parallax Start Y</label>
+        <input type="range" id="mainLogo-parallaxStartY" min="-1.0" max="0.4" step="0.05" value="-0.3">
+        <span class="range-value" id="mainLogo-parallaxStartY-val">-0.30</span>
+      </div>
+      <div class="field">
+        <label>Parallax Duration (ms)</label>
+        <input type="number" id="mainLogo-parallaxDuration" value="3000" min="500" max="10000" step="250">
+      </div>
+    </div>
+  </div>
+
+  <!-- PULSING LOGO -->
+  <div class="section">
+    <div class="section-header">Pulsing Logo</div>
+    <div class="section-body">
+      <div class="field">
+        <input type="checkbox" id="pulsingLogo-enabled" checked>
+        <span class="checkbox-label">Enabled</span>
+      </div>
+      <div class="field">
+        <label>Y Position</label>
+        <input type="range" id="pulsingLogo-yPosition" min="0.1" max="0.9" step="0.01" value="0.34">
+        <span class="range-value" id="pulsingLogo-yPosition-val">0.34</span>
+      </div>
+      <div class="field">
+        <label>Start Time (ms)</label>
+        <input type="number" id="pulsingLogo-startTime" value="10000" min="0" max="30000" step="500">
+      </div>
+      <div class="field">
+        <label>Opacity</label>
+        <input type="range" id="pulsingLogo-opacity" min="0.1" max="1.0" step="0.05" value="0.85">
+        <span class="range-value" id="pulsingLogo-opacity-val">0.85</span>
+      </div>
+      <div class="field">
+        <label>Max Scale</label>
+        <input type="range" id="pulsingLogo-maxScale" min="1.2" max="3.0" step="0.1" value="2.0">
+        <span class="range-value" id="pulsingLogo-maxScale-val">2.0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- DJ TEXT -->
+  <div class="section">
+    <div class="section-header">DJ Text</div>
+    <div class="section-body">
+      <div class="field">
+        <label>Text</label>
+        <input type="text" id="djText-text" value="DJ's moss_b &amp; TonyT">
+      </div>
+      <div class="field">
+        <label>Y Position</label>
+        <input type="range" id="djText-yPosition" min="0.3" max="0.95" step="0.01" value="0.72">
+        <span class="range-value" id="djText-yPosition-val">0.72</span>
+      </div>
+      <div class="field">
+        <label>Font Size (px)</label>
+        <input type="number" id="djText-fontSize" value="64" min="20" max="120" step="2">
+      </div>
+      <div class="field">
+        <label>Fade In Time (ms)</label>
+        <input type="number" id="djText-fadeInTime" value="5000" min="0" max="30000" step="500">
+      </div>
+    </div>
+  </div>
+
+  <!-- TEXT BOX -->
+  <div class="section">
+    <div class="section-header">Text Box</div>
+    <div class="section-body">
+      <div class="field">
+        <input type="checkbox" id="textBox-enabled" checked>
+        <span class="checkbox-label">Enabled</span>
+      </div>
+      <div class="field">
+        <label>Text</label>
+        <input type="text" id="textBox-text" value="NEXT EVENT: SAT 9PM">
+      </div>
+      <div class="field">
+        <label>Y Position</label>
+        <input type="range" id="textBox-yPosition" min="0.3" max="0.98" step="0.01" value="0.88">
+        <span class="range-value" id="textBox-yPosition-val">0.88</span>
+      </div>
+      <div class="field">
+        <label>Font Size (px)</label>
+        <input type="number" id="textBox-fontSize" value="42" min="16" max="80" step="2">
+      </div>
+      <div class="field">
+        <label>Border Width (px)</label>
+        <input type="number" id="textBox-borderWidth" value="3" min="1" max="10" step="1">
+      </div>
+      <div class="field">
+        <label>Corner Radius (px)</label>
+        <input type="number" id="textBox-cornerRadius" value="12" min="0" max="40" step="2">
+      </div>
+      <div class="field">
+        <label>Fade In Time (ms)</label>
+        <input type="number" id="textBox-fadeInTime" value="7000" min="0" max="30000" step="500">
+      </div>
+    </div>
+  </div>
+
+  <!-- SPECTRUM EQ -->
+  <div class="section">
+    <div class="section-header">Spectrum EQ</div>
+    <div class="section-body">
+      <div class="field">
+        <label>Height (px)</label>
+        <input type="number" id="spectrum-height" value="900" min="200" max="1600" step="50">
+      </div>
+      <div class="field">
+        <label>Bottom Offset (px)</label>
+        <input type="number" id="spectrum-bottomOffset" value="40" min="0" max="200" step="10">
+      </div>
+      <div class="field">
+        <label>Bar Count</label>
+        <input type="number" id="spectrum-barCount" value="32" min="8" max="64" step="4">
+      </div>
+    </div>
+  </div>
+
+  <!-- WAVEFORM -->
+  <div class="section">
+    <div class="section-header">Waveform</div>
+    <div class="section-body">
+      <div class="field">
+        <label>Y Center</label>
+        <input type="range" id="waveform-yCenter" min="0.1" max="0.9" step="0.01" value="0.61">
+        <span class="range-value" id="waveform-yCenter-val">0.61</span>
+      </div>
+      <div class="field">
+        <label>Height (px)</label>
+        <input type="number" id="waveform-height" value="1200" min="200" max="1800" step="50">
+      </div>
+      <div class="field">
+        <label>Line Width (px)</label>
+        <input type="number" id="waveform-lineWidth" value="6" min="1" max="12" step="1">
+      </div>
+    </div>
+  </div>
+
+  <!-- EFFECTS -->
+  <div class="section">
+    <div class="section-header">Effects</div>
+    <div class="section-body">
+      <div class="field">
+        <input type="checkbox" id="effects-glitch" checked>
+        <span class="checkbox-label">Glitch</span>
+      </div>
+      <div class="field">
+        <input type="checkbox" id="effects-scanlines" checked>
+        <span class="checkbox-label">Scanlines</span>
+      </div>
+      <div class="field">
+        <input type="checkbox" id="effects-grid" checked>
+        <span class="checkbox-label">Grid</span>
+      </div>
+      <div class="field">
+        <input type="checkbox" id="effects-sweeps" checked>
+        <span class="checkbox-label">Light Sweeps</span>
+      </div>
+      <div class="field">
+        <input type="checkbox" id="effects-cornerAccents" checked>
+        <span class="checkbox-label">Corner Accents</span>
+      </div>
+      <div class="field">
+        <input type="checkbox" id="effects-vignette" checked>
+        <span class="checkbox-label">Vignette</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="preview-area" style="position: relative;">
+  <iframe id="preview" src="version1_animation_v5.html"></iframe>
+  <div id="recording-overlay">
+    <div class="rec-icon"></div>
+    <div class="rec-label">Recording</div>
+    <div class="progress-bar"><div class="progress-fill" id="rec-progress"></div></div>
+    <div class="rec-time" id="rec-time">0:00 / 0:16</div>
+    <div class="rec-note" id="rec-note"></div>
+  </div>
+  <div id="button-bar">
+    <button id="btn-update">Update Preview</button>
+    <button id="btn-download">Download HTML</button>
+    <div id="record-controls">
+      <label>Loops:</label>
+      <input type="number" id="record-loops" value="1" min="1" max="10" step="1">
+      <button id="btn-record">Record Video</button>
+    </div>
+    <button id="btn-reset">Reset Defaults</button>
+  </div>
+</div>
+
+<script>
+// Section collapse toggle
+document.querySelectorAll('.section-header').forEach(header => {
+  header.addEventListener('click', () => {
+    header.parentElement.classList.toggle('collapsed');
+  });
+});
+
+// Range value display
+document.querySelectorAll('input[type="range"]').forEach(range => {
+  const valSpan = document.getElementById(range.id + '-val');
+  if (valSpan) {
+    range.addEventListener('input', () => {
+      valSpan.textContent = parseFloat(range.value).toFixed(2);
+    });
+  }
+});
+
+function gatherConfig() {
+  return {
+    global: {
+      duration: parseInt(document.getElementById('global-duration').value),
+      bpm: parseInt(document.getElementById('global-bpm').value)
+    },
+    mainLogo: {
+      yPosition: parseFloat(document.getElementById('mainLogo-yPosition').value),
+      size: parseFloat(document.getElementById('mainLogo-size').value),
+      fadeInTime: parseInt(document.getElementById('mainLogo-fadeInTime').value),
+      fadeOutTime: parseInt(document.getElementById('mainLogo-fadeOutTime').value),
+      parallax: document.getElementById('mainLogo-parallax').checked,
+      parallaxStartY: parseFloat(document.getElementById('mainLogo-parallaxStartY').value),
+      parallaxDuration: parseInt(document.getElementById('mainLogo-parallaxDuration').value)
+    },
+    pulsingLogo: {
+      enabled: document.getElementById('pulsingLogo-enabled').checked,
+      yPosition: parseFloat(document.getElementById('pulsingLogo-yPosition').value),
+      startTime: parseInt(document.getElementById('pulsingLogo-startTime').value),
+      opacity: parseFloat(document.getElementById('pulsingLogo-opacity').value),
+      maxScale: parseFloat(document.getElementById('pulsingLogo-maxScale').value)
+    },
+    djText: {
+      text: document.getElementById('djText-text').value,
+      yPosition: parseFloat(document.getElementById('djText-yPosition').value),
+      fontSize: parseInt(document.getElementById('djText-fontSize').value),
+      fadeInTime: parseInt(document.getElementById('djText-fadeInTime').value)
+    },
+    textBox: {
+      enabled: document.getElementById('textBox-enabled').checked,
+      text: document.getElementById('textBox-text').value,
+      yPosition: parseFloat(document.getElementById('textBox-yPosition').value),
+      fontSize: parseInt(document.getElementById('textBox-fontSize').value),
+      borderWidth: parseInt(document.getElementById('textBox-borderWidth').value),
+      cornerRadius: parseInt(document.getElementById('textBox-cornerRadius').value),
+      fadeInTime: parseInt(document.getElementById('textBox-fadeInTime').value),
+      paddingX: 40,
+      paddingY: 20
+    },
+    spectrum: {
+      height: parseInt(document.getElementById('spectrum-height').value),
+      bottomOffset: parseInt(document.getElementById('spectrum-bottomOffset').value),
+      barCount: parseInt(document.getElementById('spectrum-barCount').value)
+    },
+    waveform: {
+      yCenter: parseFloat(document.getElementById('waveform-yCenter').value),
+      height: parseInt(document.getElementById('waveform-height').value),
+      lineWidth: parseInt(document.getElementById('waveform-lineWidth').value)
+    },
+    effects: {
+      glitch: document.getElementById('effects-glitch').checked,
+      scanlines: document.getElementById('effects-scanlines').checked,
+      grid: document.getElementById('effects-grid').checked,
+      sweeps: document.getElementById('effects-sweeps').checked,
+      cornerAccents: document.getElementById('effects-cornerAccents').checked,
+      vignette: document.getElementById('effects-vignette').checked
+    }
+  };
+}
+
+function sendConfig() {
+  const config = gatherConfig();
+  const iframe = document.getElementById('preview');
+  iframe.contentWindow.postMessage({ type: 'CONFIG_UPDATE', config }, '*');
+}
+
+// Update button
+document.getElementById('btn-update').addEventListener('click', sendConfig);
+
+// Reset defaults
+document.getElementById('btn-reset').addEventListener('click', () => {
+  document.getElementById('global-duration').value = 16000;
+  document.getElementById('global-bpm').value = 124;
+  document.getElementById('mainLogo-yPosition').value = 0.5;
+  document.getElementById('mainLogo-size').value = 0.82;
+  document.getElementById('mainLogo-fadeInTime').value = 960;
+  document.getElementById('mainLogo-fadeOutTime').value = 800;
+  document.getElementById('mainLogo-parallax').checked = true;
+  document.getElementById('mainLogo-parallaxStartY').value = -0.3;
+  document.getElementById('mainLogo-parallaxDuration').value = 3000;
+  document.getElementById('pulsingLogo-enabled').checked = true;
+  document.getElementById('pulsingLogo-yPosition').value = 0.34;
+  document.getElementById('pulsingLogo-startTime').value = 10000;
+  document.getElementById('pulsingLogo-opacity').value = 0.85;
+  document.getElementById('pulsingLogo-maxScale').value = 2.0;
+  document.getElementById('djText-text').value = "DJ's moss_b & TonyT";
+  document.getElementById('djText-yPosition').value = 0.72;
+  document.getElementById('djText-fontSize').value = 64;
+  document.getElementById('djText-fadeInTime').value = 5000;
+  document.getElementById('textBox-enabled').checked = true;
+  document.getElementById('textBox-text').value = "NEXT EVENT: SAT 9PM";
+  document.getElementById('textBox-yPosition').value = 0.88;
+  document.getElementById('textBox-fontSize').value = 42;
+  document.getElementById('textBox-borderWidth').value = 3;
+  document.getElementById('textBox-cornerRadius').value = 12;
+  document.getElementById('textBox-fadeInTime').value = 7000;
+  document.getElementById('spectrum-height').value = 900;
+  document.getElementById('spectrum-bottomOffset').value = 40;
+  document.getElementById('spectrum-barCount').value = 32;
+  document.getElementById('waveform-yCenter').value = 0.61;
+  document.getElementById('waveform-height').value = 1200;
+  document.getElementById('waveform-lineWidth').value = 6;
+  document.getElementById('effects-glitch').checked = true;
+  document.getElementById('effects-scanlines').checked = true;
+  document.getElementById('effects-grid').checked = true;
+  document.getElementById('effects-sweeps').checked = true;
+  document.getElementById('effects-cornerAccents').checked = true;
+  document.getElementById('effects-vignette').checked = true;
+
+  // Update range display values
+  document.querySelectorAll('input[type="range"]').forEach(range => {
+    const valSpan = document.getElementById(range.id + '-val');
+    if (valSpan) valSpan.textContent = parseFloat(range.value).toFixed(2);
+  });
+
+  sendConfig();
+});
+
+// Download standalone HTML
+document.getElementById('btn-download').addEventListener('click', async () => {
+  const config = gatherConfig();
+  const iframe = document.getElementById('preview');
+
+  try {
+    const response = await fetch('version1_animation_v5.html');
+    let html = await response.text();
+
+    const configStr = JSON.stringify(config, null, 2);
+    html = html.replace(
+      /const CONFIG = \{[\s\S]*?\n\};/,
+      'const CONFIG = ' + configStr + ';'
+    );
+
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'version1_animation_custom.html';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert('Could not generate download. Make sure version1_animation_v5.html is in the same folder.');
+  }
+});
+
+// --- VIDEO RECORDING ---
+let recordingTotalMs = 0;
+
+document.getElementById('btn-record').addEventListener('click', () => {
+  sendConfig();
+  const loops = parseInt(document.getElementById('record-loops').value) || 1;
+  const duration = parseInt(document.getElementById('global-duration').value);
+  recordingTotalMs = duration * loops;
+
+  const iframe = document.getElementById('preview');
+  iframe.contentWindow.postMessage({ type: 'START_RECORDING', loops }, '*');
+  document.getElementById('btn-record').disabled = true;
+});
+
+window.addEventListener('message', (e) => {
+  if (!e.data) return;
+
+  if (e.data.type === 'RECORDING_STARTED') {
+    const overlay = document.getElementById('recording-overlay');
+    overlay.classList.add('active');
+    document.getElementById('rec-progress').style.width = '0%';
+    const totalSec = Math.round(recordingTotalMs / 1000);
+    document.getElementById('rec-time').textContent = '0:00 / ' + formatTime(totalSec);
+    const note = e.data.format === 'mp4'
+      ? 'Recording as MP4 — ready for Instagram.'
+      : 'Recording as WebM. For Instagram, convert to MP4 using a free tool like CloudConvert or HandBrake.';
+    document.getElementById('rec-note').textContent = note;
+  }
+
+  if (e.data.type === 'RECORDING_PROGRESS') {
+    const pct = Math.min(100, e.data.progress * 100);
+    document.getElementById('rec-progress').style.width = pct + '%';
+    const elapsedSec = Math.round((e.data.progress * recordingTotalMs) / 1000);
+    const totalSec = Math.round(recordingTotalMs / 1000);
+    document.getElementById('rec-time').textContent = formatTime(elapsedSec) + ' / ' + formatTime(totalSec);
+  }
+
+  if (e.data.type === 'RECORDING_COMPLETE') {
+    const overlay = document.getElementById('recording-overlay');
+    document.getElementById('rec-progress').style.width = '100%';
+    document.getElementById('rec-time').textContent = 'Download started!';
+
+    setTimeout(() => {
+      overlay.classList.remove('active');
+      document.getElementById('btn-record').disabled = false;
+    }, 2000);
+  }
+});
+
+function formatTime(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return m + ':' + String(s).padStart(2, '0');
+}
+</script>
+</body>
+</html>

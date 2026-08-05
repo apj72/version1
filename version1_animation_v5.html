@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>VERSION 1 - Animated Logo v5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Anton&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+  }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// ===== CONFIG — all tuneable parameters =====
+const CONFIG = {
+  global: {
+    duration: 16000,
+    bpm: 124
+  },
+  mainLogo: {
+    yPosition: 0.5,
+    size: 0.82,
+    fadeInTime: 960,
+    fadeOutTime: 800,
+    parallax: true,
+    parallaxStartY: -0.3,
+    parallaxDuration: 3000
+  },
+  pulsingLogo: {
+    enabled: true,
+    yPosition: 0.34,
+    startTime: 10000,
+    opacity: 0.85,
+    maxScale: 2.0
+  },
+  djText: {
+    text: "DJ's moss_b & TonyT",
+    yPosition: 0.72,
+    fontSize: 64,
+    fadeInTime: 5000
+  },
+  textBox: {
+    enabled: true,
+    text: "NEXT EVENT: SAT 9PM",
+    yPosition: 0.88,
+    fontSize: 42,
+    borderWidth: 3,
+    cornerRadius: 12,
+    fadeInTime: 7000,
+    paddingX: 40,
+    paddingY: 20
+  },
+  spectrum: {
+    height: 900,
+    bottomOffset: 40,
+    barCount: 32
+  },
+  waveform: {
+    yCenter: 0.61,
+    height: 1200,
+    lineWidth: 6
+  },
+  bgLogos: [
+    { scale: 2.2, y: 0.10, speed: 0.10, dir: -1, opacity: 0.30 },
+    { scale: 1.4, y: 0.22, speed: 0.16, dir: 1,  opacity: 0.20 },
+    { scale: 0.8, y: 0.30, speed: 0.22, dir: -1, opacity: 0.15 },
+    { scale: 2.5, y: 0.55, speed: 0.07, dir: 1,  opacity: 0.35 },
+    { scale: 1.0, y: 0.65, speed: 0.19, dir: -1, opacity: 0.18 },
+    { scale: 1.8, y: 0.78, speed: 0.13, dir: 1,  opacity: 0.28 },
+    { scale: 0.6, y: 0.88, speed: 0.25, dir: -1, opacity: 0.12 },
+    { scale: 3.0, y: 0.45, speed: 0.05, dir: -1, opacity: 0.22 },
+  ],
+  effects: {
+    glitch: true,
+    scanlines: true,
+    grid: true,
+    sweeps: true,
+    cornerAccents: true,
+    vignette: true
+  }
+};
+
+// Listen for config updates from the editor
+window.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'CONFIG_UPDATE') {
+    Object.assign(CONFIG.global, e.data.config.global || {});
+    Object.assign(CONFIG.mainLogo, e.data.config.mainLogo || {});
+    Object.assign(CONFIG.pulsingLogo, e.data.config.pulsingLogo || {});
+    Object.assign(CONFIG.djText, e.data.config.djText || {});
+    Object.assign(CONFIG.textBox, e.data.config.textBox || {});
+    Object.assign(CONFIG.spectrum, e.data.config.spectrum || {});
+    Object.assign(CONFIG.waveform, e.data.config.waveform || {});
+    Object.assign(CONFIG.effects, e.data.config.effects || {});
+    if (e.data.config.bgLogos) CONFIG.bgLogos = e.data.config.bgLogos;
+    startTime = null;
+  }
+});
+
+// Respond to config requests from editor
+window.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'GET_CONFIG') {
+    window.parent.postMessage({ type: 'CONFIG_RESPONSE', config: JSON.parse(JSON.stringify(CONFIG)) }, '*');
+  }
+  if (e.data && e.data.type === 'START_RECORDING') {
+    startRecording(e.data.loops || 1);
+  }
+});
+
+let isRecording = false;
+let recordingStartTime = null;
+let recordingDuration = 0;
+
+function startRecording(loops) {
+  const stream = canvas.captureStream(30);
+  let mimeType = 'video/webm;codecs=vp9';
+  let ext = 'webm';
+  const tryTypes = [
+    ['video/mp4;codecs=avc1', 'mp4'],
+    ['video/mp4', 'mp4'],
+    ['video/webm;codecs=h264', 'webm'],
+    ['video/webm;codecs=vp9', 'webm'],
+    ['video/webm;codecs=vp8', 'webm'],
+    ['video/webm', 'webm'],
+  ];
+  for (const [type, e] of tryTypes) {
+    if (MediaRecorder.isTypeSupported(type)) {
+      mimeType = type;
+      ext = e;
+      break;
+    }
+  }
+
+  const recorder = new MediaRecorder(stream, {
+    mimeType,
+    videoBitsPerSecond: 12000000
+  });
+
+  const chunks = [];
+  recorder.ondataavailable = (ev) => {
+    if (ev.data.size > 0) chunks.push(ev.data);
+  };
+
+  recorder.onstop = () => {
+    isRecording = false;
+    recordingStartTime = null;
+    const blob = new Blob(chunks, { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'version1_animation.' + ext;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    window.parent.postMessage({ type: 'RECORDING_COMPLETE', format: ext }, '*');
+  };
+
+  startTime = null;
+  recordingDuration = CONFIG.global.duration * loops;
+  isRecording = true;
+
+  requestAnimationFrame(() => {
+    recorder.start(1000);
+    window.parent.postMessage({ type: 'RECORDING_STARTED', format: ext, duration: recordingDuration }, '*');
+
+    setTimeout(() => {
+      recorder.stop();
+    }, recordingDuration + 200);
+  });
+}
+
+const W = 1080, H = 1920;
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  const scale = Math.min(window.innerWidth / W, window.innerHeight / H);
+  canvas.width = W;
+  canvas.height = H;
+  canvas.style.width = (W * scale) + 'px';
+  canvas.style.height = (H * scale) + 'px';
+}
+resize();
+window.addEventListener('resize', resize);
+
+const RED = '#E8423F';
+const RED_GLOW = '#FF5A57';
+const WHITE = '#FFFFFF';
+const BG = '#000000';
+const GREY_DARK = '#1a1a1a';
+const GREY_MID = '#333333';
+const GREEN = '#00FF88';
+const AMBER = '#FFAA00';
+const CYAN = '#00DDFF';
+
+let startTime = null;
+
+const logoImg = new Image();
+let logoLoaded = false;
+logoImg.onload = () => { logoLoaded = true; };
+logoImg.onerror = () => { console.warn('Logo image not found at logo.png'); };
+logoImg.src = 'logo.png';
+
+// --- SIMULATED AUDIO ENGINE ---
+function getAudioData(time) {
+  const t = time / 1000;
+  const bpm = CONFIG.global.bpm;
+  const beatPhase = (t * bpm / 60) % 1;
+  const kick = Math.pow(Math.max(0, 1 - beatPhase * 4), 3);
+  const snare = Math.pow(Math.max(0, 1 - ((beatPhase + 0.5) % 1) * 6), 2) * 0.7;
+
+  const spectrum = [];
+  for (let i = 0; i < 32; i++) {
+    const freq = i / 32;
+    let val = 0;
+    if (i < 6) val += kick * (1 - freq * 3) * 0.9;
+    if (i >= 4 && i < 12) val += (0.3 + 0.3 * Math.sin(t * 2.1 + i * 0.5)) * (snare * 0.5 + 0.4);
+    if (i >= 8 && i < 20) val += (0.2 + 0.25 * Math.sin(t * 3.7 + i * 0.8)) * (0.5 + 0.3 * Math.sin(t * 1.3));
+    if (i >= 16) val += (0.15 + 0.2 * Math.sin(t * 5.3 + i * 1.2)) * (0.3 + snare * 0.4);
+    if (i >= 20) {
+      const hhPhase = (t * bpm / 60 * 2) % 1;
+      val += Math.pow(Math.max(0, 1 - hhPhase * 8), 2) * 0.35;
+    }
+    val += Math.random() * 0.05;
+    spectrum.push(Math.min(1, Math.max(0, val)));
+  }
+
+  const waveform = [];
+  for (let i = 0; i < 128; i++) {
+    const phase = i / 128 * Math.PI * 2;
+    let val = 0;
+    val += Math.sin(phase * 2 + t * 8) * 0.3 * (0.5 + kick * 0.5);
+    val += Math.sin(phase * 5 + t * 13) * 0.15;
+    val += Math.sin(phase * 11 + t * 21) * 0.08;
+    val += Math.sin(phase * 23 + t * 34) * 0.05;
+    val += (Math.random() - 0.5) * 0.06;
+    waveform.push(val);
+  }
+
+  const rmsBase = 0.35 + kick * 0.3 + snare * 0.15 + Math.sin(t * 1.7) * 0.1;
+  const vuL = Math.min(1, rmsBase + Math.sin(t * 2.3) * 0.08 + Math.random() * 0.03);
+  const vuR = Math.min(1, rmsBase + Math.sin(t * 2.3 + 0.5) * 0.08 + Math.random() * 0.03);
+
+  return { spectrum, waveform, vuL, vuR, kick, beatPhase };
+}
+
+let smoothSpectrum = new Array(32).fill(0);
+let smoothVuL = 0, smoothVuR = 0;
+let peakVuL = 0, peakVuR = 0;
+let peakDecayL = 0, peakDecayR = 0;
+
+function updateSmoothed(audio) {
+  const attack = 0.4, release = 0.08;
+  for (let i = 0; i < 32; i++) {
+    const target = audio.spectrum[i];
+    smoothSpectrum[i] += (target > smoothSpectrum[i] ? attack : release) * (target - smoothSpectrum[i]);
+  }
+  const vuAttack = 0.35, vuRelease = 0.06;
+  smoothVuL += (audio.vuL > smoothVuL ? vuAttack : vuRelease) * (audio.vuL - smoothVuL);
+  smoothVuR += (audio.vuR > smoothVuR ? vuAttack : vuRelease) * (audio.vuR - smoothVuR);
+  if (smoothVuL > peakVuL) { peakVuL = smoothVuL; peakDecayL = 0; }
+  else { peakDecayL++; if (peakDecayL > 30) peakVuL -= 0.008; }
+  if (smoothVuR > peakVuR) { peakVuR = smoothVuR; peakDecayR = 0; }
+  else { peakDecayR++; if (peakDecayR > 30) peakVuR -= 0.008; }
+}
+
+// --- SPECTRUM ANALYSER ---
+function drawSpectrumAnalyser(ctx, x, y, w, h, alpha) {
+  if (alpha <= 0) return;
+  ctx.save();
+
+  const bars = CONFIG.spectrum.barCount;
+  const barGap = 4;
+  const barW = (w - (bars - 1) * barGap) / bars;
+  const segH = 8, segGap = 3;
+  const totalSegs = Math.floor(h / (segH + segGap));
+  const greenSegs = Math.round(totalSegs * 0.75);
+  const amberSegs = Math.round(totalSegs * 0.1875);
+
+  for (let i = 0; i < bars; i++) {
+    const specIdx = Math.floor((i / bars) * 32);
+    const val = smoothSpectrum[Math.min(31, specIdx)];
+    const litSegs = Math.floor(val * totalSegs);
+    const bx = x + i * (barW + barGap);
+
+    for (let s = 0; s < litSegs; s++) {
+      const sy = y + h - (s + 1) * (segH + segGap);
+      if (s >= greenSegs + amberSegs) ctx.fillStyle = RED;
+      else if (s >= greenSegs) ctx.fillStyle = AMBER;
+      else ctx.fillStyle = GREEN;
+      ctx.globalAlpha = alpha * (0.75 + 0.25 * val);
+      ctx.fillRect(bx, sy, barW, segH);
+    }
+
+    if (val > 0.1) {
+      const peakSy = y + h - litSegs * (segH + segGap) - segH;
+      ctx.fillStyle = WHITE;
+      ctx.globalAlpha = alpha * 0.9;
+      ctx.fillRect(bx, peakSy, barW, 3);
+    }
+  }
+
+  ctx.restore();
+}
+
+// --- WAVEFORM DISPLAY (spectrum-reactive) ---
+function drawWaveform(ctx, x, y, w, h, alpha, audio) {
+  if (alpha <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  const centerY = y + h / 2;
+  const points = 256;
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = CYAN;
+  ctx.lineWidth = CONFIG.waveform.lineWidth;
+  ctx.shadowColor = CYAN;
+  ctx.shadowBlur = 18;
+  ctx.beginPath();
+  for (let i = 0; i < points; i++) {
+    const px = x + (i / points) * w;
+    const specIdx = Math.floor((i / points) * 32);
+    const specVal = smoothSpectrum[Math.min(31, specIdx)];
+    const nextVal = smoothSpectrum[Math.min(31, specIdx + 1)];
+    const frac = ((i / points) * 32) - specIdx;
+    const blended = specVal + (nextVal - specVal) * frac;
+    const wave = Math.sin(i * Math.PI * 2 / (points / 8) + audio.waveform[i % 128] * 4);
+    const py = centerY + wave * blended * h * 0.48;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = alpha * 0.1;
+  ctx.fillStyle = CYAN;
+  ctx.lineTo(x + w, centerY);
+  ctx.lineTo(x, centerY);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// --- RED-BORDERED TEXT BOX ---
+function drawTextBox(ctx, alpha) {
+  if (!CONFIG.textBox.enabled || alpha <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  const text = CONFIG.textBox.text;
+  const y = H * CONFIG.textBox.yPosition;
+  const fontSize = CONFIG.textBox.fontSize;
+  const borderW = CONFIG.textBox.borderWidth;
+  const radius = CONFIG.textBox.cornerRadius;
+  const padX = CONFIG.textBox.paddingX;
+  const padY = CONFIG.textBox.paddingY;
+
+  ctx.font = 'bold ' + fontSize + 'px "Arial Black", "Helvetica Neue", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const metrics = ctx.measureText(text);
+  const boxW = metrics.width + padX * 2;
+  const boxH = fontSize + padY * 2;
+  const boxX = (W - boxW) / 2;
+  const boxY = y - boxH / 2;
+
+  ctx.strokeStyle = RED;
+  ctx.lineWidth = borderW;
+  ctx.beginPath();
+  ctx.roundRect(boxX, boxY, boxW, boxH, radius);
+  ctx.stroke();
+
+  ctx.fillStyle = WHITE;
+  ctx.fillText(text, W / 2, y);
+
+  ctx.restore();
+}
+
+// --- PARTICLES ---
+class Particle {
+  constructor(x, y, color, speed, size, life) {
+    this.x = x; this.y = y; this.color = color;
+    this.vx = (Math.random() - 0.5) * speed;
+    this.vy = (Math.random() - 0.5) * speed;
+    this.size = size; this.life = life; this.maxLife = life; this.decay = 0.97;
+  }
+  update() { this.x += this.vx; this.y += this.vy; this.vx *= this.decay; this.vy *= this.decay; this.life--; }
+  draw(ctx) {
+    ctx.globalAlpha = Math.max(0, this.life / this.maxLife);
+    ctx.fillStyle = this.color; ctx.shadowColor = this.color; ctx.shadowBlur = this.size * 3;
+    ctx.fillRect(this.x - this.size/2, this.y - this.size/2, this.size, this.size);
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  }
+}
+let particles = [];
+function spawnParticles(x, y, count, color, speed, size, life) {
+  for (let i = 0; i < count; i++) particles.push(new Particle(x, y, color, speed||4, size||3, life||60));
+}
+
+// --- EFFECTS ---
+function drawScanlines(ctx, intensity) {
+  ctx.globalAlpha = intensity * 0.12;
+  for (let y = 0; y < H; y += 4) { ctx.fillStyle = '#000'; ctx.fillRect(0, y, W, 2); }
+  ctx.globalAlpha = 1;
+}
+
+function glitchSlice(ctx, intensity) {
+  const slices = Math.floor(3 + Math.random() * 8 * intensity);
+  for (let i = 0; i < slices; i++) {
+    const y = Math.floor(Math.random() * H), h = Math.floor(5 + Math.random() * 40 * intensity);
+    const offset = Math.floor((Math.random() - 0.5) * 60 * intensity);
+    try { const d = ctx.getImageData(0, y, W, h); ctx.putImageData(d, offset, y); } catch(e) {}
+  }
+}
+
+function rgbSplit(ctx, intensity) {
+  const offset = Math.floor(intensity * 8);
+  try {
+    const imgData = ctx.getImageData(0, 0, W, H); const data = imgData.data;
+    const copy = new Uint8ClampedArray(data);
+    for (let i = 0; i < data.length; i += 4) {
+      const x = (i/4) % W;
+      if (x + offset < W) data[i] = copy[i + offset * 4];
+      if (x - offset >= 0) data[i + 2] = copy[i - offset * 4 + 2];
+    }
+    ctx.putImageData(imgData, 0, 0);
+  } catch(e) {}
+}
+
+function noiseRect(ctx, intensity) {
+  const count = Math.floor(intensity * 12);
+  for (let i = 0; i < count; i++) {
+    ctx.globalAlpha = 0.3 + Math.random() * 0.5;
+    ctx.fillStyle = Math.random() > 0.5 ? RED : WHITE;
+    ctx.fillRect(Math.random()*W, Math.random()*H, 20+Math.random()*100*intensity, 2+Math.random()*8);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawGrid(ctx, time, intensity) {
+  if (intensity <= 0) return;
+  ctx.save(); ctx.globalAlpha = intensity * 0.06; ctx.strokeStyle = RED; ctx.lineWidth = 1;
+  const sp = 60, off = Math.sin(time/1000) * 10;
+  for (let x = off; x < W; x += sp) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y = off; y < H; y += sp) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+  ctx.restore();
+}
+
+function drawSweep(ctx, progress, y, height) {
+  if (progress < 0 || progress > 1) return;
+  const sx = -200 + (W + 400) * progress;
+  const grad = ctx.createLinearGradient(sx-200, 0, sx+200, 0);
+  grad.addColorStop(0, 'rgba(255,255,255,0)');
+  grad.addColorStop(0.4, 'rgba(255,255,255,0.08)');
+  grad.addColorStop(0.5, 'rgba(255,255,255,0.2)');
+  grad.addColorStop(0.6, 'rgba(255,255,255,0.08)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, y-height/2, W, height);
+}
+
+function easeOutExpo(t) { return t === 1 ? 1 : 1 - Math.pow(2, -10*t); }
+function easeOutBack(t) { const c = 1.7; return 1 + (c+1)*Math.pow(t-1,3) + c*Math.pow(t-1,2); }
+function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+// --- MAIN RENDER ---
+function render(timestamp) {
+  if (!startTime) startTime = timestamp;
+  const TOTAL_DURATION = CONFIG.global.duration;
+  const elapsed = (timestamp - startTime) % TOTAL_DURATION;
+  const t = elapsed / TOTAL_DURATION;
+
+  const audio = getAudioData(timestamp - (startTime || 0));
+  updateSmoothed(audio);
+
+  // Reset particles near loop boundary for clean restart
+  if (t < 0.02) particles = [];
+
+  ctx.fillStyle = BG;
+  ctx.fillRect(0, 0, W, H);
+
+  // Parallax: logo scrolls in at start, scrolls out at end for seamless loop
+  let logoY;
+  const pxDur = CONFIG.mainLogo.parallaxDuration;
+  const startYPos = H * CONFIG.mainLogo.parallaxStartY;
+  const endYPos = H * CONFIG.mainLogo.yPosition;
+  if (CONFIG.mainLogo.parallax && elapsed < pxDur) {
+    const pProgress = easeOutCubic(elapsed / pxDur);
+    logoY = startYPos + (endYPos - startYPos) * pProgress;
+  } else if (CONFIG.mainLogo.parallax && elapsed > TOTAL_DURATION - pxDur) {
+    const pProgress = easeOutCubic((TOTAL_DURATION - elapsed) / pxDur);
+    logoY = startYPos + (endYPos - startYPos) * pProgress;
+  } else {
+    logoY = endYPos;
+  }
+
+  // Master fade envelope: 0 at boundaries, 1 in the middle (seamless loop)
+  const fadeIn = 0.05, fadeOut = 0.05;
+  let masterAlpha = 1;
+  if (t < fadeIn) masterAlpha = t / fadeIn;
+  else if (t > 1.0 - fadeOut) masterAlpha = (1.0 - t) / fadeOut;
+
+  // Instrument fade-in/out
+  let instrAlpha = 0;
+  if (t > 0.04 && t < 0.96) {
+    instrAlpha = t < 0.10 ? (t - 0.04) / 0.06 : (t > 0.90 ? (0.96 - t) / 0.06 : 1);
+  }
+  instrAlpha *= masterAlpha;
+
+  // Grid
+  if (CONFIG.effects.grid) {
+    let gridI = 0;
+    if (t > 0.01 && t < 0.95) gridI = t < 0.06 ? (t-0.01)/0.05 : (t > 0.88 ? (0.95-t)/0.07 : 1);
+    drawGrid(ctx, elapsed, gridI * 0.6 * masterAlpha);
+  }
+
+  // --- SCROLLING BACKGROUND LOGOS (fade in/out for seamless loop) ---
+  let bgFade = 1;
+  if (t < 0.05) bgFade = t / 0.05;
+  else if (t > 0.93) bgFade = Math.max(0, (1.0 - t) / 0.07);
+
+  if (logoLoaded && bgFade > 0) {
+    const bgAspect = logoImg.naturalWidth / logoImg.naturalHeight;
+
+    for (const layer of CONFIG.bgLogos) {
+      const lW = W * layer.scale;
+      const lH = lW / bgAspect;
+      const scrollLen = lW + W;
+
+      // Parallax: bg logos shift vertically at different rates, in AND out
+      let layerY = H * layer.y;
+      if (CONFIG.mainLogo.parallax) {
+        const parallaxRate = 0.3 + layer.speed * 2;
+        const layerShift = H * 0.15 * parallaxRate;
+        if (elapsed < pxDur) {
+          const pProgress = easeOutCubic(elapsed / pxDur);
+          layerY = (H * layer.y - layerShift) + layerShift * pProgress;
+        } else if (elapsed > TOTAL_DURATION - pxDur) {
+          const pProgress = easeOutCubic((TOTAL_DURATION - elapsed) / pxDur);
+          layerY = (H * layer.y - layerShift) + layerShift * pProgress;
+        }
+      }
+
+      const px = layer.dir > 0
+        ? -lW + ((elapsed * layer.speed) % scrollLen)
+        : W - ((elapsed * layer.speed) % scrollLen);
+
+      ctx.save();
+      ctx.globalAlpha = layer.opacity * bgFade;
+      ctx.drawImage(logoImg, px, layerY - lH / 2, lW, lH);
+      ctx.drawImage(logoImg, px + layer.dir * -scrollLen, layerY - lH / 2, lW, lH);
+      ctx.restore();
+    }
+  }
+
+  // Light sweeps
+  if (CONFIG.effects.sweeps) {
+    if (t > 0.10 && t < 0.20) drawSweep(ctx, (t - 0.10) / 0.10, logoY, 200);
+    if (t > 0.45 && t < 0.55) drawSweep(ctx, (t - 0.45) / 0.10, logoY, 150);
+    if (t > 0.70 && t < 0.78) drawSweep(ctx, (t - 0.70) / 0.08, logoY, 150);
+  }
+
+  // Glitch (symmetric: intro burst mirrors outro burst)
+  if (CONFIG.effects.glitch && masterAlpha > 0.1) {
+    let gI = 0;
+    if (t > 0.06 && t < 0.12) gI = 0.8 * (1 - (t - 0.06) / 0.06);
+    if (t > 0.15 && t < 0.20) gI = Math.max(gI, 0.7 * (1 - (t - 0.15) / 0.05));
+    if (t > 0.25 && t < 0.85 && Math.sin(elapsed * 0.017) > 0.97) gI = 0.3;
+    if (t > 0.88 && t < 0.94) gI = Math.max(gI, 0.8 * ((t - 0.88) / 0.06));
+    gI *= masterAlpha;
+    if (gI > 0.1) { glitchSlice(ctx, gI); rgbSplit(ctx, gI * 0.8); }
+    if (gI > 0.3) noiseRect(ctx, gI * 0.6);
+  }
+
+  // Scanlines
+  if (CONFIG.effects.scanlines) {
+    let sI = 0.4 * masterAlpha;
+    drawScanlines(ctx, sI);
+  }
+
+  // Particles
+  particles = particles.filter(p => p.life > 0);
+  particles.forEach(p => { p.update(); p.draw(ctx); });
+
+  // Corner accents
+  if (CONFIG.effects.cornerAccents && t > 0.08 && t < 0.94) {
+    const cA = (t < 0.14 ? (t - 0.08) / 0.06 : (t > 0.88 ? (0.94 - t) / 0.06 : 1)) * masterAlpha;
+    ctx.save(); ctx.globalAlpha = cA * 0.3; ctx.strokeStyle = RED; ctx.lineWidth = 2;
+    const m = 40, l = 60;
+    ctx.beginPath(); ctx.moveTo(m, m+l); ctx.lineTo(m, m); ctx.lineTo(m+l, m); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W-m-l, m); ctx.lineTo(W-m, m); ctx.lineTo(W-m, m+l); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(m, H-m-l); ctx.lineTo(m, H-m); ctx.lineTo(m+l, H-m); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W-m-l, H-m); ctx.lineTo(W-m, H-m); ctx.lineTo(W-m, H-m-l); ctx.stroke();
+    ctx.restore();
+  }
+
+  // Vignette (stronger at boundaries to help fade to black)
+  if (CONFIG.effects.vignette) {
+    const vignetteStrength = 0.55 + (1 - masterAlpha) * 0.45;
+    const vG = ctx.createRadialGradient(W/2, H/2, H*0.3, W/2, H/2, H*0.8);
+    vG.addColorStop(0, 'rgba(0,0,0,0)');
+    vG.addColorStop(1, 'rgba(0,0,0,' + vignetteStrength + ')');
+    ctx.fillStyle = vG; ctx.fillRect(0, 0, W, H);
+  }
+
+  // --- MAIN LOGO (symmetric fade in/out, respects master envelope) ---
+  const fadeInNorm = CONFIG.mainLogo.fadeInTime / TOTAL_DURATION;
+  const fadeOutNorm = CONFIG.mainLogo.fadeOutTime / TOTAL_DURATION;
+  const logoFadeOutStart = 1.0 - fadeOutNorm - 0.04;
+  let logoAlpha = 0;
+  if (t >= 0.04 && t < (1.0 - 0.04)) {
+    const rT = Math.min(1, (t - 0.04) / fadeInNorm);
+    logoAlpha = easeOutExpo(rT);
+    if (t > logoFadeOutStart) logoAlpha *= Math.max(0, ((1.0 - 0.04) - t) / fadeOutNorm);
+  }
+  logoAlpha *= masterAlpha;
+
+  const targetW = W * CONFIG.mainLogo.size;
+  const aspect = logoLoaded ? logoImg.naturalWidth / logoImg.naturalHeight : 5;
+  const drawW = targetW;
+  const drawH = drawW / aspect;
+
+  // Kick-synced pulse ghost (fades out with logo for seamless loop)
+  const pulseEndTime = TOTAL_DURATION - pxDur;
+  if (CONFIG.pulsingLogo.enabled && logoAlpha > 0 && logoLoaded
+      && elapsed > CONFIG.pulsingLogo.startTime && elapsed < pulseEndTime) {
+    const beatDuration = 60 / CONFIG.global.bpm;
+    const totalTime = (timestamp - (startTime || 0)) / 1000;
+    const beatPhase = (totalTime / beatDuration) % 1;
+    const pulseScale = 1 + beatPhase * (CONFIG.pulsingLogo.maxScale - 1);
+    let pulseFade = 1;
+    if (elapsed > pulseEndTime - 2000) pulseFade = Math.max(0, (pulseEndTime - elapsed) / 2000);
+    const pulseAlpha = logoAlpha * CONFIG.pulsingLogo.opacity * Math.pow(1 - beatPhase, 1.5) * pulseFade;
+
+    if (pulseAlpha > 0.01) {
+      ctx.save();
+      ctx.translate(W / 2, H * CONFIG.pulsingLogo.yPosition);
+      ctx.scale(pulseScale, pulseScale);
+      ctx.globalAlpha = pulseAlpha;
+      ctx.drawImage(logoImg, -drawW / 2, -drawH / 2, drawW, drawH);
+      ctx.restore();
+    }
+  }
+
+  // --- SPECTRUM ANALYSER ---
+  const specH = CONFIG.spectrum.height;
+  const specX = 30, specW = W - 60;
+  const specY = H - specH - CONFIG.spectrum.bottomOffset;
+  drawSpectrumAnalyser(ctx, specX, specY, specW, specH, instrAlpha * 0.9);
+
+  // Solid logo on top
+  if (logoAlpha > 0 && logoLoaded) {
+    ctx.save();
+    ctx.translate(W / 2, logoY);
+    ctx.globalAlpha = logoAlpha;
+    ctx.drawImage(logoImg, -drawW / 2, -drawH / 2, drawW, drawH);
+    ctx.restore();
+  }
+
+  // --- DJ NAMES (fade in + fade out before loop) ---
+  const djFadeStart = CONFIG.djText.fadeInTime / TOTAL_DURATION;
+  const djFadeDur = 1500 / TOTAL_DURATION;
+  const djFadeOutStart = 1.0 - djFadeDur - 0.04;
+  if (elapsed >= CONFIG.djText.fadeInTime) {
+    let djAlpha = Math.min(1, (t - djFadeStart) / djFadeDur);
+    if (t > djFadeOutStart) djAlpha *= Math.max(0, ((1.0 - 0.04) - t) / djFadeDur);
+
+    ctx.save();
+    ctx.globalAlpha = djAlpha;
+    ctx.fillStyle = WHITE;
+    ctx.font = 'bold ' + CONFIG.djText.fontSize + 'px "Arial Black", "Helvetica Neue", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.letterSpacing = '4px';
+    ctx.fillText(CONFIG.djText.text, W / 2, H * CONFIG.djText.yPosition);
+    ctx.restore();
+  }
+
+  // --- TEXT BOX (fade in + fade out before loop) ---
+  if (CONFIG.textBox.enabled && elapsed >= CONFIG.textBox.fadeInTime) {
+    const tbFadeStart = CONFIG.textBox.fadeInTime / TOTAL_DURATION;
+    const tbFadeDur = 1500 / TOTAL_DURATION;
+    const tbFadeOutStart = 1.0 - tbFadeDur - 0.04;
+    let tbAlpha = Math.min(1, (t - tbFadeStart) / tbFadeDur);
+    if (t > tbFadeOutStart) tbAlpha *= Math.max(0, ((1.0 - 0.04) - t) / tbFadeDur);
+    drawTextBox(ctx, tbAlpha);
+  }
+
+  // --- WAVEFORM (top layer) ---
+  const waveH = CONFIG.waveform.height;
+  const waveX = 30, waveY = H * CONFIG.waveform.yCenter - waveH / 2, waveW = W - 60;
+  drawWaveform(ctx, waveX, waveY, waveW, waveH, instrAlpha * 0.85, audio);
+
+  // Recording progress
+  if (isRecording && startTime) {
+    const recElapsed = timestamp - startTime;
+    const progress = Math.min(1, recElapsed / recordingDuration);
+    window.parent.postMessage({ type: 'RECORDING_PROGRESS', progress }, '*');
+  }
+
+  requestAnimationFrame(render);
+}
+
+requestAnimationFrame(render);
+</script>
+</body>
+</html>

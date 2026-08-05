@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>VERSION 1 - Animated Logo v4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Anton&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+  }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const W = 1080, H = 1920;
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  const scale = Math.min(window.innerWidth / W, window.innerHeight / H);
+  canvas.width = W;
+  canvas.height = H;
+  canvas.style.width = (W * scale) + 'px';
+  canvas.style.height = (H * scale) + 'px';
+}
+resize();
+window.addEventListener('resize', resize);
+
+const RED = '#E8423F';
+const RED_GLOW = '#FF5A57';
+const WHITE = '#FFFFFF';
+const BG = '#000000';
+const GREY_DARK = '#1a1a1a';
+const GREY_MID = '#333333';
+const GREEN = '#00FF88';
+const AMBER = '#FFAA00';
+const CYAN = '#00DDFF';
+
+let startTime = null;
+const TOTAL_DURATION = 16000;
+
+const logoImg = new Image();
+let logoLoaded = false;
+logoImg.onload = () => { logoLoaded = true; };
+logoImg.onerror = () => { console.warn('Logo image not found at logo.png'); };
+logoImg.src = 'logo.png';
+
+const bgLogos = [
+  { scale: 2.2, y: 0.10, speed: 0.10, dir: -1, opacity: 0.30 },
+  { scale: 1.4, y: 0.22, speed: 0.16, dir: 1,  opacity: 0.20 },
+  { scale: 0.8, y: 0.30, speed: 0.22, dir: -1, opacity: 0.15 },
+  { scale: 2.5, y: 0.55, speed: 0.07, dir: 1,  opacity: 0.35 },
+  { scale: 1.0, y: 0.65, speed: 0.19, dir: -1, opacity: 0.18 },
+  { scale: 1.8, y: 0.78, speed: 0.13, dir: 1,  opacity: 0.28 },
+  { scale: 0.6, y: 0.88, speed: 0.25, dir: -1, opacity: 0.12 },
+  { scale: 3.0, y: 0.45, speed: 0.05, dir: -1, opacity: 0.22 },
+];
+
+// --- SIMULATED AUDIO ENGINE ---
+function getAudioData(time) {
+  const t = time / 1000;
+  const bpm = 124;
+  const beatPhase = (t * bpm / 60) % 1;
+  const kick = Math.pow(Math.max(0, 1 - beatPhase * 4), 3);
+  const snare = Math.pow(Math.max(0, 1 - ((beatPhase + 0.5) % 1) * 6), 2) * 0.7;
+
+  const spectrum = [];
+  for (let i = 0; i < 32; i++) {
+    const freq = i / 32;
+    let val = 0;
+    if (i < 6) val += kick * (1 - freq * 3) * 0.9;
+    if (i >= 4 && i < 12) val += (0.3 + 0.3 * Math.sin(t * 2.1 + i * 0.5)) * (snare * 0.5 + 0.4);
+    if (i >= 8 && i < 20) val += (0.2 + 0.25 * Math.sin(t * 3.7 + i * 0.8)) * (0.5 + 0.3 * Math.sin(t * 1.3));
+    if (i >= 16) val += (0.15 + 0.2 * Math.sin(t * 5.3 + i * 1.2)) * (0.3 + snare * 0.4);
+    if (i >= 20) {
+      const hhPhase = (t * bpm / 60 * 2) % 1;
+      val += Math.pow(Math.max(0, 1 - hhPhase * 8), 2) * 0.35;
+    }
+    val += Math.random() * 0.05;
+    spectrum.push(Math.min(1, Math.max(0, val)));
+  }
+
+  const waveform = [];
+  for (let i = 0; i < 128; i++) {
+    const phase = i / 128 * Math.PI * 2;
+    let val = 0;
+    val += Math.sin(phase * 2 + t * 8) * 0.3 * (0.5 + kick * 0.5);
+    val += Math.sin(phase * 5 + t * 13) * 0.15;
+    val += Math.sin(phase * 11 + t * 21) * 0.08;
+    val += Math.sin(phase * 23 + t * 34) * 0.05;
+    val += (Math.random() - 0.5) * 0.06;
+    waveform.push(val);
+  }
+
+  const rmsBase = 0.35 + kick * 0.3 + snare * 0.15 + Math.sin(t * 1.7) * 0.1;
+  const vuL = Math.min(1, rmsBase + Math.sin(t * 2.3) * 0.08 + Math.random() * 0.03);
+  const vuR = Math.min(1, rmsBase + Math.sin(t * 2.3 + 0.5) * 0.08 + Math.random() * 0.03);
+
+  return { spectrum, waveform, vuL, vuR, kick, beatPhase };
+}
+
+let smoothSpectrum = new Array(32).fill(0);
+let smoothVuL = 0, smoothVuR = 0;
+let peakVuL = 0, peakVuR = 0;
+let peakDecayL = 0, peakDecayR = 0;
+
+function updateSmoothed(audio) {
+  const attack = 0.4, release = 0.08;
+  for (let i = 0; i < 32; i++) {
+    const target = audio.spectrum[i];
+    smoothSpectrum[i] += (target > smoothSpectrum[i] ? attack : release) * (target - smoothSpectrum[i]);
+  }
+  const vuAttack = 0.35, vuRelease = 0.06;
+  smoothVuL += (audio.vuL > smoothVuL ? vuAttack : vuRelease) * (audio.vuL - smoothVuL);
+  smoothVuR += (audio.vuR > smoothVuR ? vuAttack : vuRelease) * (audio.vuR - smoothVuR);
+  if (smoothVuL > peakVuL) { peakVuL = smoothVuL; peakDecayL = 0; }
+  else { peakDecayL++; if (peakDecayL > 30) peakVuL -= 0.008; }
+  if (smoothVuR > peakVuR) { peakVuR = smoothVuR; peakDecayR = 0; }
+  else { peakDecayR++; if (peakDecayR > 30) peakVuR -= 0.008; }
+}
+
+// --- SPECTRUM ANALYSER (prominent, thick bars, bottom of screen) ---
+function drawSpectrumAnalyser(ctx, x, y, w, h, alpha) {
+  if (alpha <= 0) return;
+  ctx.save();
+
+  const bars = 32;
+  const barGap = 4;
+  const barW = (w - (bars - 1) * barGap) / bars;
+  const segH = 8, segGap = 3;
+  const totalSegs = Math.floor(h / (segH + segGap));
+  const greenSegs = Math.round(totalSegs * 0.75);
+  const amberSegs = Math.round(totalSegs * 0.1875);
+
+  for (let i = 0; i < bars; i++) {
+    const val = smoothSpectrum[i];
+    const litSegs = Math.floor(val * totalSegs);
+    const bx = x + i * (barW + barGap);
+
+    for (let s = 0; s < litSegs; s++) {
+      const sy = y + h - (s + 1) * (segH + segGap);
+      if (s >= greenSegs + amberSegs) ctx.fillStyle = RED;
+      else if (s >= greenSegs) ctx.fillStyle = AMBER;
+      else ctx.fillStyle = GREEN;
+      ctx.globalAlpha = alpha * (0.75 + 0.25 * val);
+      ctx.fillRect(bx, sy, barW, segH);
+    }
+
+    if (val > 0.1) {
+      const peakSy = y + h - litSegs * (segH + segGap) - segH;
+      ctx.fillStyle = WHITE;
+      ctx.globalAlpha = alpha * 0.9;
+      ctx.fillRect(bx, peakSy, barW, 3);
+    }
+  }
+
+  ctx.restore();
+}
+
+// --- WAVEFORM DISPLAY (spectrum-reactive) ---
+function drawWaveform(ctx, x, y, w, h, alpha, audio) {
+  if (alpha <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  const centerY = y + h / 2;
+
+  const points = 256;
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = CYAN;
+  ctx.lineWidth = 6;
+  ctx.shadowColor = CYAN;
+  ctx.shadowBlur = 18;
+  ctx.beginPath();
+  for (let i = 0; i < points; i++) {
+    const px = x + (i / points) * w;
+    const specIdx = Math.floor((i / points) * 32);
+    const specVal = smoothSpectrum[Math.min(31, specIdx)];
+    const nextVal = smoothSpectrum[Math.min(31, specIdx + 1)];
+    const frac = ((i / points) * 32) - specIdx;
+    const blended = specVal + (nextVal - specVal) * frac;
+    const wave = Math.sin(i * Math.PI * 2 / (points / 8) + audio.waveform[i % 128] * 4);
+    const py = centerY + wave * blended * h * 0.48;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = alpha * 0.1;
+  ctx.fillStyle = CYAN;
+  ctx.lineTo(x + w, centerY);
+  ctx.lineTo(x, centerY);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// --- PARTICLES ---
+class Particle {
+  constructor(x, y, color, speed, size, life) {
+    this.x = x; this.y = y; this.color = color;
+    this.vx = (Math.random() - 0.5) * speed;
+    this.vy = (Math.random() - 0.5) * speed;
+    this.size = size; this.life = life; this.maxLife = life; this.decay = 0.97;
+  }
+  update() { this.x += this.vx; this.y += this.vy; this.vx *= this.decay; this.vy *= this.decay; this.life--; }
+  draw(ctx) {
+    ctx.globalAlpha = Math.max(0, this.life / this.maxLife);
+    ctx.fillStyle = this.color; ctx.shadowColor = this.color; ctx.shadowBlur = this.size * 3;
+    ctx.fillRect(this.x - this.size/2, this.y - this.size/2, this.size, this.size);
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  }
+}
+let particles = [];
+function spawnParticles(x, y, count, color, speed, size, life) {
+  for (let i = 0; i < count; i++) particles.push(new Particle(x, y, color, speed||4, size||3, life||60));
+}
+
+// --- EFFECTS ---
+function drawScanlines(ctx, intensity) {
+  ctx.globalAlpha = intensity * 0.12;
+  for (let y = 0; y < H; y += 4) { ctx.fillStyle = '#000'; ctx.fillRect(0, y, W, 2); }
+  ctx.globalAlpha = 1;
+}
+
+function glitchSlice(ctx, intensity) {
+  const slices = Math.floor(3 + Math.random() * 8 * intensity);
+  for (let i = 0; i < slices; i++) {
+    const y = Math.floor(Math.random() * H), h = Math.floor(5 + Math.random() * 40 * intensity);
+    const offset = Math.floor((Math.random() - 0.5) * 60 * intensity);
+    try { const d = ctx.getImageData(0, y, W, h); ctx.putImageData(d, offset, y); } catch(e) {}
+  }
+}
+
+function rgbSplit(ctx, intensity) {
+  const offset = Math.floor(intensity * 8);
+  try {
+    const imgData = ctx.getImageData(0, 0, W, H); const data = imgData.data;
+    const copy = new Uint8ClampedArray(data);
+    for (let i = 0; i < data.length; i += 4) {
+      const x = (i/4) % W;
+      if (x + offset < W) data[i] = copy[i + offset * 4];
+      if (x - offset >= 0) data[i + 2] = copy[i - offset * 4 + 2];
+    }
+    ctx.putImageData(imgData, 0, 0);
+  } catch(e) {}
+}
+
+function noiseRect(ctx, intensity) {
+  const count = Math.floor(intensity * 12);
+  for (let i = 0; i < count; i++) {
+    ctx.globalAlpha = 0.3 + Math.random() * 0.5;
+    ctx.fillStyle = Math.random() > 0.5 ? RED : WHITE;
+    ctx.fillRect(Math.random()*W, Math.random()*H, 20+Math.random()*100*intensity, 2+Math.random()*8);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawGrid(ctx, time, intensity) {
+  if (intensity <= 0) return;
+  ctx.save(); ctx.globalAlpha = intensity * 0.06; ctx.strokeStyle = RED; ctx.lineWidth = 1;
+  const sp = 60, off = Math.sin(time/1000) * 10;
+  for (let x = off; x < W; x += sp) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y = off; y < H; y += sp) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+  ctx.restore();
+}
+
+function drawSweep(ctx, progress, y, height) {
+  if (progress < 0 || progress > 1) return;
+  const sx = -200 + (W + 400) * progress;
+  const grad = ctx.createLinearGradient(sx-200, 0, sx+200, 0);
+  grad.addColorStop(0, 'rgba(255,255,255,0)');
+  grad.addColorStop(0.4, 'rgba(255,255,255,0.08)');
+  grad.addColorStop(0.5, 'rgba(255,255,255,0.2)');
+  grad.addColorStop(0.6, 'rgba(255,255,255,0.08)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, y-height/2, W, height);
+}
+
+function easeOutExpo(t) { return t === 1 ? 1 : 1 - Math.pow(2, -10*t); }
+function easeOutBack(t) { const c = 1.7; return 1 + (c+1)*Math.pow(t-1,3) + c*Math.pow(t-1,2); }
+
+// --- MAIN RENDER ---
+function render(timestamp) {
+  if (!startTime) startTime = timestamp;
+  const elapsed = (timestamp - startTime) % TOTAL_DURATION;
+  const t = elapsed / TOTAL_DURATION;
+
+  const audio = getAudioData(timestamp - (startTime || 0));
+  updateSmoothed(audio);
+
+  ctx.fillStyle = BG;
+  ctx.fillRect(0, 0, W, H);
+
+  const logoY = H * 0.5;
+
+  // Instrument fade-in/out
+  let instrAlpha = 0;
+  if (t > 0.04 && t < 0.96) {
+    instrAlpha = t < 0.10 ? (t - 0.04) / 0.06 : (t > 0.90 ? (0.96 - t) / 0.06 : 1);
+  }
+
+  // Grid
+  let gridI = 0;
+  if (t > 0.01 && t < 0.95) gridI = t < 0.06 ? (t-0.01)/0.05 : (t > 0.88 ? (0.95-t)/0.07 : 1);
+  drawGrid(ctx, elapsed, gridI * 0.6);
+
+  // --- SCROLLING BACKGROUND LOGOS (multiple layers) ---
+  if (logoLoaded) {
+    const bgAspect = logoImg.naturalWidth / logoImg.naturalHeight;
+
+    for (const layer of bgLogos) {
+      const lW = W * layer.scale;
+      const lH = lW / bgAspect;
+      const scrollLen = lW + W;
+      const px = layer.dir > 0
+        ? -lW + ((elapsed * layer.speed) % scrollLen)
+        : W - ((elapsed * layer.speed) % scrollLen);
+
+      ctx.save();
+      ctx.globalAlpha = layer.opacity;
+      ctx.drawImage(logoImg, px, H * layer.y - lH / 2, lW, lH);
+      ctx.drawImage(logoImg, px + layer.dir * -scrollLen, H * layer.y - lH / 2, lW, lH);
+      ctx.restore();
+    }
+  }
+
+  // Light sweeps
+  if (t > 0.10 && t < 0.20) drawSweep(ctx, (t - 0.10) / 0.10, logoY, 200);
+  if (t > 0.45 && t < 0.55) drawSweep(ctx, (t - 0.45) / 0.10, logoY, 150);
+  if (t > 0.70 && t < 0.78) drawSweep(ctx, (t - 0.70) / 0.08, logoY, 150);
+
+  // Glitch
+  let gI = 0;
+  if (t > 0.02 && t < 0.08) gI = 0.8 * (1 - (t - 0.02) / 0.06);
+  if (t > 0.06 && t < 0.10) gI = Math.max(gI, 0.5);
+  if (t > 0.15 && t < 0.20) gI = Math.max(gI, 0.7 * (1 - (t - 0.15) / 0.05));
+  if (t > 0.25 && t < 0.90 && Math.sin(elapsed * 0.017) > 0.97) gI = 0.3;
+  if (t > 0.90 && t < 0.97) gI = (t - 0.90) / 0.07;
+
+  if (gI > 0.1) { glitchSlice(ctx, gI); rgbSplit(ctx, gI * 0.8); }
+  if (gI > 0.3) noiseRect(ctx, gI * 0.6);
+
+  // Scanlines
+  let sI = 0.4;
+  if (t < 0.03) sI = t / 0.03 * 0.4;
+  if (t > 0.95) sI = (1 - t) / 0.05 * 0.4;
+  drawScanlines(ctx, sI);
+
+  // Particles
+  particles = particles.filter(p => p.life > 0);
+  particles.forEach(p => { p.update(); p.draw(ctx); });
+
+  // Corner accents
+  if (t > 0.08 && t < 0.94) {
+    const cA = t < 0.14 ? (t - 0.08) / 0.06 : (t > 0.88 ? (0.94 - t) / 0.06 : 1);
+    ctx.save(); ctx.globalAlpha = cA * 0.3; ctx.strokeStyle = RED; ctx.lineWidth = 2;
+    const m = 40, l = 60;
+    ctx.beginPath(); ctx.moveTo(m, m+l); ctx.lineTo(m, m); ctx.lineTo(m+l, m); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W-m-l, m); ctx.lineTo(W-m, m); ctx.lineTo(W-m, m+l); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(m, H-m-l); ctx.lineTo(m, H-m); ctx.lineTo(m+l, H-m); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W-m-l, H-m); ctx.lineTo(W-m, H-m); ctx.lineTo(W-m, H-m-l); ctx.stroke();
+    ctx.restore();
+  }
+
+  // Vignette
+  const vG = ctx.createRadialGradient(W/2, H/2, H*0.3, W/2, H/2, H*0.8);
+  vG.addColorStop(0, 'rgba(0,0,0,0)'); vG.addColorStop(1, 'rgba(0,0,0,0.55)');
+  ctx.fillStyle = vG; ctx.fillRect(0, 0, W, H);
+
+  // --- MAIN LOGO (top layer, fully opaque, fixed size) ---
+  let logoAlpha = 0;
+  if (t >= 0.06 && t < 0.97) {
+    const rT = Math.min(1, (t - 0.06) / 0.08);
+    logoAlpha = easeOutExpo(rT);
+    if (t > 0.92) logoAlpha *= Math.max(0, (0.97 - t) / 0.05);
+  }
+
+  const targetW = W * 0.82;
+  const aspect = logoLoaded ? logoImg.naturalWidth / logoImg.naturalHeight : 5;
+  const drawW = targetW;
+  const drawH = drawW / aspect;
+
+  // Kick-synced pulse ghost (transparent, expands out from the logo)
+  if (logoAlpha > 0 && logoLoaded && elapsed > 10000) {
+    const beatDuration = 60 / 124;
+    const totalTime = (timestamp - (startTime || 0)) / 1000;
+    const beatPhase = (totalTime / beatDuration) % 1;
+    const pulseScale = 1 + beatPhase * 1.0;
+    const pulseAlpha = logoAlpha * 0.85 * Math.pow(1 - beatPhase, 1.5);
+
+    if (pulseAlpha > 0.01) {
+      ctx.save();
+      ctx.translate(W / 2, H * 0.34);
+      ctx.scale(pulseScale, pulseScale);
+      ctx.globalAlpha = pulseAlpha;
+      ctx.drawImage(logoImg, -drawW / 2, -drawH / 2, drawW, drawH);
+      ctx.restore();
+    }
+  }
+
+  // --- SPECTRUM ANALYSER — on top of pulsing logo ---
+  const specH = 900;
+  const specX = 30, specW = W - 60;
+  const specY = H - specH - 40;
+  drawSpectrumAnalyser(ctx, specX, specY, specW, specH, instrAlpha * 0.9);
+
+  // Solid logo on top (always 1x scale)
+  if (logoAlpha > 0 && logoLoaded) {
+    ctx.save();
+    ctx.translate(W / 2, logoY);
+    ctx.globalAlpha = logoAlpha;
+    ctx.drawImage(logoImg, -drawW / 2, -drawH / 2, drawW, drawH);
+    ctx.restore();
+  }
+
+  // --- DJ NAMES (fade in at 5 seconds, lower third) ---
+  const djFadeStart = 5000 / TOTAL_DURATION;
+  const djFadeDur = 1500 / TOTAL_DURATION;
+  if (elapsed >= 5000) {
+    let djAlpha = Math.min(1, (t - djFadeStart) / djFadeDur);
+    if (t > 0.92) djAlpha *= Math.max(0, (0.97 - t) / 0.05);
+
+    ctx.save();
+    ctx.globalAlpha = djAlpha;
+    ctx.fillStyle = WHITE;
+    ctx.font = 'bold 64px "Arial Black", "Helvetica Neue", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.letterSpacing = '4px';
+    ctx.fillText("DJ's moss_b & TonyT", W / 2, H * 0.72);
+    ctx.restore();
+  }
+
+  // --- WAVEFORM (top layer, centered on logo) ---
+  const waveH = 1200;
+  const waveX = 30, waveY = H * 0.61 - waveH / 2, waveW = W - 60;
+  drawWaveform(ctx, waveX, waveY, waveW, waveH, instrAlpha * 0.85, audio);
+
+  requestAnimationFrame(render);
+}
+
+requestAnimationFrame(render);
+</script>
+</body>
+</html>
