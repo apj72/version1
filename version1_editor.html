@@ -83,7 +83,8 @@
   }
 
   .field input[type="text"],
-  .field input[type="number"] {
+  .field input[type="number"],
+  .field select {
     width: 100%;
     padding: 6px 10px;
     background: #222;
@@ -91,6 +92,37 @@
     border-radius: 4px;
     color: #eee;
     font-size: 14px;
+  }
+
+  .field select { cursor: pointer; }
+
+  .font-upload-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .font-upload-row label.upload-btn {
+    display: inline-block;
+    padding: 5px 12px;
+    background: #333;
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #ccc;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .font-upload-row label.upload-btn:hover { background: #444; }
+
+  .font-upload-row .font-name {
+    font-size: 12px;
+    color: #888;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .field input[type="range"] {
@@ -377,6 +409,25 @@
         <input type="text" id="djText-text" value="DJ's moss_b &amp; TonyT">
       </div>
       <div class="field">
+        <label>Font</label>
+        <select id="djText-font">
+          <option value='"Arial Black", "Helvetica Neue", sans-serif' selected>Arial Black</option>
+          <option value='"Bebas Neue", "Anton", Impact, sans-serif'>Bebas Neue (ALL CAPS)</option>
+          <option value='Impact, "Arial Black", sans-serif'>Impact</option>
+          <option value='"Courier New", monospace'>Courier New</option>
+          <option value='"Georgia", serif'>Georgia</option>
+          <option value='"Trebuchet MS", sans-serif'>Trebuchet MS</option>
+          <option value="custom-dj">Custom font file...</option>
+        </select>
+      </div>
+      <div class="field" id="djText-upload-field" style="display:none;">
+        <div class="font-upload-row">
+          <label class="upload-btn" for="djText-fontFile">Upload font</label>
+          <input type="file" id="djText-fontFile" accept=".ttf,.otf,.woff,.woff2" style="display:none;">
+          <span class="font-name" id="djText-fontFileName">No file chosen</span>
+        </div>
+      </div>
+      <div class="field">
         <label>Y Position</label>
         <input type="range" id="djText-yPosition" min="0.3" max="0.95" step="0.01" value="0.72">
         <span class="range-value" id="djText-yPosition-val">0.72</span>
@@ -403,6 +454,25 @@
       <div class="field">
         <label>Text</label>
         <input type="text" id="textBox-text" value="NEXT EVENT: SAT 9PM">
+      </div>
+      <div class="field">
+        <label>Font</label>
+        <select id="textBox-font">
+          <option value='"Arial Black", "Helvetica Neue", sans-serif' selected>Arial Black</option>
+          <option value='"Bebas Neue", "Anton", Impact, sans-serif'>Bebas Neue (ALL CAPS)</option>
+          <option value='Impact, "Arial Black", sans-serif'>Impact</option>
+          <option value='"Courier New", monospace'>Courier New</option>
+          <option value='"Georgia", serif'>Georgia</option>
+          <option value='"Trebuchet MS", sans-serif'>Trebuchet MS</option>
+          <option value="custom-tb">Custom font file...</option>
+        </select>
+      </div>
+      <div class="field" id="textBox-upload-field" style="display:none;">
+        <div class="font-upload-row">
+          <label class="upload-btn" for="textBox-fontFile">Upload font</label>
+          <input type="file" id="textBox-fontFile" accept=".ttf,.otf,.woff,.woff2" style="display:none;">
+          <span class="font-name" id="textBox-fontFileName">No file chosen</span>
+        </div>
       </div>
       <div class="field">
         <label>Y Position</label>
@@ -538,6 +608,68 @@ document.querySelectorAll('input[type="range"]').forEach(range => {
   }
 });
 
+// Custom font state
+let customFonts = { dj: null, tb: null };
+
+function getDjFontFamily() {
+  const sel = document.getElementById('djText-font').value;
+  if (sel === 'custom-dj' && customFonts.dj) return '"CustomDJ", sans-serif';
+  if (sel === 'custom-dj') return '"Arial Black", "Helvetica Neue", sans-serif';
+  return sel;
+}
+
+function getTbFontFamily() {
+  const sel = document.getElementById('textBox-font').value;
+  if (sel === 'custom-tb' && customFonts.tb) return '"CustomTB", sans-serif';
+  if (sel === 'custom-tb') return '"Arial Black", "Helvetica Neue", sans-serif';
+  return sel;
+}
+
+// Show/hide upload field when "Custom font file..." is selected
+document.getElementById('djText-font').addEventListener('change', (e) => {
+  document.getElementById('djText-upload-field').style.display = e.target.value === 'custom-dj' ? '' : 'none';
+});
+document.getElementById('textBox-font').addEventListener('change', (e) => {
+  document.getElementById('textBox-upload-field').style.display = e.target.value === 'custom-tb' ? '' : 'none';
+});
+
+// Font file upload handlers
+document.getElementById('djText-fontFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById('djText-fontFileName').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = () => {
+    customFonts.dj = reader.result;
+    const font = new FontFace('CustomDJ', 'url(' + reader.result + ')');
+    font.load().then((loaded) => {
+      document.fonts.add(loaded);
+      document.getElementById('djText-fontFileName').textContent = file.name + ' (loaded)';
+    });
+    const iframe = document.getElementById('preview');
+    iframe.contentWindow.postMessage({ type: 'LOAD_CUSTOM_FONT', name: 'CustomDJ', dataUrl: reader.result }, '*');
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('textBox-fontFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById('textBox-fontFileName').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = () => {
+    customFonts.tb = reader.result;
+    const font = new FontFace('CustomTB', 'url(' + reader.result + ')');
+    font.load().then((loaded) => {
+      document.fonts.add(loaded);
+      document.getElementById('textBox-fontFileName').textContent = file.name + ' (loaded)';
+    });
+    const iframe = document.getElementById('preview');
+    iframe.contentWindow.postMessage({ type: 'LOAD_CUSTOM_FONT', name: 'CustomTB', dataUrl: reader.result }, '*');
+  };
+  reader.readAsDataURL(file);
+});
+
 function gatherConfig() {
   return {
     global: {
@@ -564,7 +696,8 @@ function gatherConfig() {
       text: document.getElementById('djText-text').value,
       yPosition: parseFloat(document.getElementById('djText-yPosition').value),
       fontSize: parseInt(document.getElementById('djText-fontSize').value),
-      fadeInTime: parseInt(document.getElementById('djText-fadeInTime').value)
+      fadeInTime: parseInt(document.getElementById('djText-fadeInTime').value),
+      fontFamily: getDjFontFamily()
     },
     textBox: {
       enabled: document.getElementById('textBox-enabled').checked,
@@ -575,7 +708,8 @@ function gatherConfig() {
       cornerRadius: parseInt(document.getElementById('textBox-cornerRadius').value),
       fadeInTime: parseInt(document.getElementById('textBox-fadeInTime').value),
       paddingX: 40,
-      paddingY: 20
+      paddingY: 20,
+      fontFamily: getTbFontFamily()
     },
     spectrum: {
       height: parseInt(document.getElementById('spectrum-height').value),
@@ -624,11 +758,15 @@ document.getElementById('btn-reset').addEventListener('click', () => {
   document.getElementById('pulsingLogo-opacity').value = 0.85;
   document.getElementById('pulsingLogo-maxScale').value = 2.0;
   document.getElementById('djText-text').value = "DJ's moss_b & TonyT";
+  document.getElementById('djText-font').value = '"Arial Black", "Helvetica Neue", sans-serif';
+  document.getElementById('djText-upload-field').style.display = 'none';
   document.getElementById('djText-yPosition').value = 0.72;
   document.getElementById('djText-fontSize').value = 64;
   document.getElementById('djText-fadeInTime').value = 5000;
   document.getElementById('textBox-enabled').checked = true;
   document.getElementById('textBox-text').value = "NEXT EVENT: SAT 9PM";
+  document.getElementById('textBox-font').value = '"Arial Black", "Helvetica Neue", sans-serif';
+  document.getElementById('textBox-upload-field').style.display = 'none';
   document.getElementById('textBox-yPosition').value = 0.88;
   document.getElementById('textBox-fontSize').value = 42;
   document.getElementById('textBox-borderWidth').value = 3;

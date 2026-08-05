@@ -48,7 +48,8 @@ const CONFIG = {
     text: "DJ's moss_b & TonyT",
     yPosition: 0.72,
     fontSize: 64,
-    fadeInTime: 5000
+    fadeInTime: 5000,
+    fontFamily: '"Arial Black", "Helvetica Neue", sans-serif'
   },
   textBox: {
     enabled: true,
@@ -59,7 +60,8 @@ const CONFIG = {
     cornerRadius: 12,
     fadeInTime: 7000,
     paddingX: 40,
-    paddingY: 20
+    paddingY: 20,
+    fontFamily: '"Arial Black", "Helvetica Neue", sans-serif'
   },
   spectrum: {
     height: 900,
@@ -115,7 +117,20 @@ window.addEventListener('message', (e) => {
   if (e.data && e.data.type === 'START_RECORDING') {
     startRecording(e.data.loops || 1);
   }
+  if (e.data && e.data.type === 'LOAD_CUSTOM_FONT') {
+    loadCustomFont(e.data.name, e.data.dataUrl);
+  }
 });
+
+function loadCustomFont(name, dataUrl) {
+  const font = new FontFace(name, 'url(' + dataUrl + ')');
+  font.load().then((loaded) => {
+    document.fonts.add(loaded);
+    window.parent.postMessage({ type: 'FONT_LOADED', name }, '*');
+  }).catch((err) => {
+    window.parent.postMessage({ type: 'FONT_ERROR', name, error: err.message }, '*');
+  });
+}
 
 let isRecording = false;
 let recordingStartTime = null;
@@ -367,7 +382,7 @@ function drawTextBox(ctx, alpha) {
   const padX = CONFIG.textBox.paddingX;
   const padY = CONFIG.textBox.paddingY;
 
-  ctx.font = 'bold ' + fontSize + 'px "Arial Black", "Helvetica Neue", sans-serif';
+  ctx.font = 'bold ' + fontSize + 'px ' + CONFIG.textBox.fontFamily;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   const metrics = ctx.measureText(text);
@@ -680,7 +695,7 @@ function render(timestamp) {
     ctx.save();
     ctx.globalAlpha = djAlpha;
     ctx.fillStyle = WHITE;
-    ctx.font = 'bold ' + CONFIG.djText.fontSize + 'px "Arial Black", "Helvetica Neue", sans-serif';
+    ctx.font = 'bold ' + CONFIG.djText.fontSize + 'px ' + CONFIG.djText.fontFamily;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.letterSpacing = '4px';
