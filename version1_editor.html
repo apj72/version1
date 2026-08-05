@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <title>VERSION 1 - Animation Editor</title>
 <style>
+  @font-face {
+    font-family: 'Bungee';
+    src: url('font/Bungee-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -92,6 +98,16 @@
     border-radius: 4px;
     color: #eee;
     font-size: 14px;
+  }
+
+  .field input[type="color"] {
+    width: 60px;
+    height: 32px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    background: #222;
+    cursor: pointer;
+    padding: 2px;
   }
 
   .field select { cursor: pointer; }
@@ -454,6 +470,173 @@
     color: #ccc;
   }
   .confirm-box .btn-cancel:hover { background: #555; }
+
+  /* Dynamic panels */
+  .dynamic-panel {
+    border: 1px solid #333;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: #2a2a2a;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #ccc;
+  }
+
+  .panel-header .btn-remove {
+    background: none;
+    border: 1px solid #555;
+    color: #888;
+    font-size: 14px;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .panel-header .btn-remove:hover { background: #633; color: #faa; border-color: #a44; }
+
+  .panel-body {
+    padding: 10px 12px;
+  }
+
+  .btn-add {
+    display: block;
+    width: 100%;
+    padding: 8px;
+    background: #2a7a3a;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  .btn-add:hover { background: #3a9a4a; }
+
+  .border-fields { margin-top: 8px; }
+
+  .image-upload-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .image-upload-row label.upload-btn {
+    display: inline-block;
+    padding: 5px 12px;
+    background: #333;
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #ccc;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .image-upload-row label.upload-btn:hover { background: #444; }
+
+  .image-upload-row .image-name {
+    font-size: 12px;
+    color: #888;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .btn-clear-image {
+    background: none;
+    border: 1px solid #555;
+    color: #888;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .btn-clear-image:hover { background: #633; color: #faa; }
+
+  /* Clock-face direction picker */
+  .clock-face-wrap {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .clock-face {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    border: 1px solid #444;
+    border-radius: 50%;
+    background: #1a1a1a;
+    flex-shrink: 0;
+  }
+  .clock-dot {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid #555;
+    background: #222;
+    cursor: pointer;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0;
+    transition: background 0.15s, border-color 0.15s;
+    z-index: 1;
+  }
+  .clock-dot:hover { border-color: #aaa; }
+  .clock-dot.selected {
+    background: #E8423F;
+    border-color: #E8423F;
+  }
+  .clock-arrow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 2px;
+    background: #E8423F;
+    transform-origin: bottom center;
+    border-radius: 1px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .clock-label {
+    font-size: 11px;
+    color: #888;
+    line-height: 1.3;
+  }
+  .clock-label .dir-name {
+    color: #E8423F;
+    font-weight: 700;
+  }
+
+  .color-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .color-row label {
+    margin-bottom: 0 !important;
+  }
 </style>
 </head>
 <body>
@@ -487,44 +670,30 @@
         <label>BPM</label>
         <input type="number" id="global-bpm" value="124" min="60" max="200" step="1">
       </div>
+      <div class="field">
+        <div class="color-row">
+          <label>Background Colour</label>
+          <input type="color" id="global-bgColor" value="#000000">
+        </div>
+      </div>
+      <div class="field">
+        <label>Background Image</label>
+        <div class="image-upload-row">
+          <label class="upload-btn" for="global-bgImage">Upload image</label>
+          <input type="file" id="global-bgImage" accept="image/*" style="display:none;">
+          <span class="image-name" id="global-bgImageName">No image</span>
+          <button class="btn-clear-image" id="global-bgImageClear" style="display:none;">Clear</button>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- MAIN LOGO -->
+  <!-- LOGOS -->
   <div class="section">
-    <div class="section-header">Main Logo</div>
+    <div class="section-header">Logos</div>
     <div class="section-body">
-      <div class="field">
-        <label>Y Position</label>
-        <input type="range" id="mainLogo-yPosition" min="0.1" max="0.9" step="0.01" value="0.5">
-        <span class="range-value" id="mainLogo-yPosition-val">0.50</span>
-      </div>
-      <div class="field">
-        <label>Size</label>
-        <input type="range" id="mainLogo-size" min="0.3" max="1.0" step="0.01" value="0.82">
-        <span class="range-value" id="mainLogo-size-val">0.82</span>
-      </div>
-      <div class="field">
-        <label>Fade In (ms)</label>
-        <input type="number" id="mainLogo-fadeInTime" value="960" min="100" max="5000" step="100">
-      </div>
-      <div class="field">
-        <label>Fade Out (ms)</label>
-        <input type="number" id="mainLogo-fadeOutTime" value="800" min="100" max="5000" step="100">
-      </div>
-      <div class="field">
-        <input type="checkbox" id="mainLogo-parallax" checked>
-        <span class="checkbox-label">Parallax entrance</span>
-      </div>
-      <div class="field">
-        <label>Parallax Start Y</label>
-        <input type="range" id="mainLogo-parallaxStartY" min="-1.0" max="0.4" step="0.05" value="-0.3">
-        <span class="range-value" id="mainLogo-parallaxStartY-val">-0.30</span>
-      </div>
-      <div class="field">
-        <label>Parallax Duration (ms)</label>
-        <input type="number" id="mainLogo-parallaxDuration" value="3000" min="500" max="10000" step="250">
-      </div>
+      <div id="logos-container"></div>
+      <button class="btn-add" id="btn-add-logo">+ Add Logo</button>
     </div>
   </div>
 
@@ -532,6 +701,14 @@
   <div class="section">
     <div class="section-header">Pulsing Logo</div>
     <div class="section-body">
+      <div class="field">
+        <label>Pulse Image</label>
+        <div class="image-upload-row">
+          <label class="upload-btn">Upload image<input type="file" id="pulsingLogo-image" accept="image/*" style="display:none;"></label>
+          <span class="image-name" id="pulsingLogo-imageName">Default (Logo 1)</span>
+          <button class="btn-clear-image" id="pulsingLogo-imageClear" style="display:none;">Clear</button>
+        </div>
+      </div>
       <div class="field">
         <input type="checkbox" id="pulsingLogo-enabled" checked>
         <span class="checkbox-label">Enabled</span>
@@ -558,101 +735,12 @@
     </div>
   </div>
 
-  <!-- DJ TEXT -->
+  <!-- TEXT BOXES -->
   <div class="section">
-    <div class="section-header">DJ Text</div>
+    <div class="section-header">Text Boxes</div>
     <div class="section-body">
-      <div class="field">
-        <label>Text</label>
-        <input type="text" id="djText-text" value="DJ's moss_b &amp; TonyT">
-      </div>
-      <div class="field">
-        <label>Font</label>
-        <select id="djText-font">
-          <option value='"Arial Black", "Helvetica Neue", sans-serif' selected>Arial Black</option>
-          <option value='"Bebas Neue", "Anton", Impact, sans-serif'>Bebas Neue (ALL CAPS)</option>
-          <option value='Impact, "Arial Black", sans-serif'>Impact</option>
-          <option value='"Courier New", monospace'>Courier New</option>
-          <option value='"Georgia", serif'>Georgia</option>
-          <option value='"Trebuchet MS", sans-serif'>Trebuchet MS</option>
-          <option value="custom-dj">Custom font file...</option>
-        </select>
-      </div>
-      <div class="field" id="djText-upload-field" style="display:none;">
-        <div class="font-upload-row">
-          <label class="upload-btn" for="djText-fontFile">Upload font</label>
-          <input type="file" id="djText-fontFile" accept=".ttf,.otf,.woff,.woff2" style="display:none;">
-          <span class="font-name" id="djText-fontFileName">No file chosen</span>
-        </div>
-      </div>
-      <div class="field">
-        <label>Y Position</label>
-        <input type="range" id="djText-yPosition" min="0.3" max="0.95" step="0.01" value="0.72">
-        <span class="range-value" id="djText-yPosition-val">0.72</span>
-      </div>
-      <div class="field">
-        <label>Font Size (px)</label>
-        <input type="number" id="djText-fontSize" value="64" min="20" max="120" step="2">
-      </div>
-      <div class="field">
-        <label>Fade In Time (ms)</label>
-        <input type="number" id="djText-fadeInTime" value="5000" min="0" max="30000" step="500">
-      </div>
-    </div>
-  </div>
-
-  <!-- TEXT BOX -->
-  <div class="section">
-    <div class="section-header">Text Box</div>
-    <div class="section-body">
-      <div class="field">
-        <input type="checkbox" id="textBox-enabled" checked>
-        <span class="checkbox-label">Enabled</span>
-      </div>
-      <div class="field">
-        <label>Text</label>
-        <input type="text" id="textBox-text" value="NEXT EVENT: SAT 9PM">
-      </div>
-      <div class="field">
-        <label>Font</label>
-        <select id="textBox-font">
-          <option value='"Arial Black", "Helvetica Neue", sans-serif' selected>Arial Black</option>
-          <option value='"Bebas Neue", "Anton", Impact, sans-serif'>Bebas Neue (ALL CAPS)</option>
-          <option value='Impact, "Arial Black", sans-serif'>Impact</option>
-          <option value='"Courier New", monospace'>Courier New</option>
-          <option value='"Georgia", serif'>Georgia</option>
-          <option value='"Trebuchet MS", sans-serif'>Trebuchet MS</option>
-          <option value="custom-tb">Custom font file...</option>
-        </select>
-      </div>
-      <div class="field" id="textBox-upload-field" style="display:none;">
-        <div class="font-upload-row">
-          <label class="upload-btn" for="textBox-fontFile">Upload font</label>
-          <input type="file" id="textBox-fontFile" accept=".ttf,.otf,.woff,.woff2" style="display:none;">
-          <span class="font-name" id="textBox-fontFileName">No file chosen</span>
-        </div>
-      </div>
-      <div class="field">
-        <label>Y Position</label>
-        <input type="range" id="textBox-yPosition" min="0.3" max="0.98" step="0.01" value="0.88">
-        <span class="range-value" id="textBox-yPosition-val">0.88</span>
-      </div>
-      <div class="field">
-        <label>Font Size (px)</label>
-        <input type="number" id="textBox-fontSize" value="42" min="16" max="80" step="2">
-      </div>
-      <div class="field">
-        <label>Border Width (px)</label>
-        <input type="number" id="textBox-borderWidth" value="3" min="1" max="10" step="1">
-      </div>
-      <div class="field">
-        <label>Corner Radius (px)</label>
-        <input type="number" id="textBox-cornerRadius" value="12" min="0" max="40" step="2">
-      </div>
-      <div class="field">
-        <label>Fade In Time (ms)</label>
-        <input type="number" id="textBox-fadeInTime" value="7000" min="0" max="30000" step="500">
-      </div>
+      <div id="textboxes-container"></div>
+      <button class="btn-add" id="btn-add-textbox">+ Add Text Box</button>
     </div>
   </div>
 
@@ -660,6 +748,10 @@
   <div class="section">
     <div class="section-header">Spectrum EQ</div>
     <div class="section-body">
+      <div class="field">
+        <input type="checkbox" id="spectrum-enabled" checked>
+        <span class="checkbox-label">Enabled</span>
+      </div>
       <div class="field">
         <label>Height (px)</label>
         <input type="number" id="spectrum-height" value="900" min="200" max="1600" step="50">
@@ -680,6 +772,10 @@
     <div class="section-header">Waveform</div>
     <div class="section-body">
       <div class="field">
+        <input type="checkbox" id="waveform-enabled" checked>
+        <span class="checkbox-label">Enabled</span>
+      </div>
+      <div class="field">
         <label>Y Center</label>
         <input type="range" id="waveform-yCenter" min="0.1" max="0.9" step="0.01" value="0.61">
         <span class="range-value" id="waveform-yCenter-val">0.61</span>
@@ -692,6 +788,15 @@
         <label>Line Width (px)</label>
         <input type="number" id="waveform-lineWidth" value="6" min="1" max="12" step="1">
       </div>
+    </div>
+  </div>
+
+  <!-- BACKGROUND LOGOS -->
+  <div class="section">
+    <div class="section-header">Background Logos</div>
+    <div class="section-body">
+      <div id="bglogos-container"></div>
+      <button class="btn-add" id="btn-add-bglogo">+ Add Background Logo</button>
     </div>
   </div>
 
@@ -744,7 +849,20 @@
       <input type="number" id="record-loops" value="1" min="1" max="10" step="1">
       <button id="btn-record">Record Video</button>
     </div>
+    <button id="btn-labels">Show Labels</button>
+    <button id="btn-save-defaults">Save as Default</button>
     <button id="btn-reset">Reset Defaults</button>
+  </div>
+</div>
+
+<div id="confirm-overlay">
+  <div class="confirm-box">
+    <p>Delete this layout?</p>
+    <div class="preset-name" id="confirm-preset-name"></div>
+    <div class="confirm-buttons">
+      <button class="btn-confirm-delete" id="btn-confirm-yes">Delete</button>
+      <button class="btn-cancel" id="btn-confirm-no">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -756,129 +874,535 @@ document.querySelectorAll('.section-header').forEach(header => {
   });
 });
 
-// Range value display
-document.querySelectorAll('input[type="range"]').forEach(range => {
-  const valSpan = document.getElementById(range.id + '-val');
+// Range value display helper
+function attachRangeDisplay(input) {
+  const valSpan = document.getElementById(input.id + '-val');
   if (valSpan) {
-    range.addEventListener('input', () => {
-      valSpan.textContent = parseFloat(range.value).toFixed(2);
+    input.addEventListener('input', () => {
+      valSpan.textContent = parseFloat(input.value).toFixed(2);
     });
   }
-});
-
-// Custom font state
-let customFonts = { dj: null, tb: null };
-
-function getDjFontFamily() {
-  const sel = document.getElementById('djText-font').value;
-  if (sel === 'custom-dj' && customFonts.dj) return '"CustomDJ", sans-serif';
-  if (sel === 'custom-dj') return '"Arial Black", "Helvetica Neue", sans-serif';
-  return sel;
 }
+document.querySelectorAll('input[type="range"]').forEach(attachRangeDisplay);
 
-function getTbFontFamily() {
-  const sel = document.getElementById('textBox-font').value;
-  if (sel === 'custom-tb' && customFonts.tb) return '"CustomTB", sans-serif';
-  if (sel === 'custom-tb') return '"Arial Black", "Helvetica Neue", sans-serif';
-  return sel;
-}
+// ===== FONT OPTIONS =====
+const FONT_OPTIONS = [
+  { label: 'Bungee', value: '"Bungee", "Arial Black", sans-serif' },
+  { label: 'Arial Black', value: '"Arial Black", "Helvetica Neue", sans-serif' },
+  { label: 'Bebas Neue (ALL CAPS)', value: '"Bebas Neue", "Anton", Impact, sans-serif' },
+  { label: 'Impact', value: 'Impact, "Arial Black", sans-serif' },
+  { label: 'Courier New', value: '"Courier New", monospace' },
+  { label: 'Georgia', value: '"Georgia", serif' },
+  { label: 'Trebuchet MS', value: '"Trebuchet MS", sans-serif' },
+  { label: 'Custom font file...', value: 'custom' },
+];
 
-// Show/hide upload field when "Custom font file..." is selected
-document.getElementById('djText-font').addEventListener('change', (e) => {
-  document.getElementById('djText-upload-field').style.display = e.target.value === 'custom-dj' ? '' : 'none';
-});
-document.getElementById('textBox-font').addEventListener('change', (e) => {
-  document.getElementById('textBox-upload-field').style.display = e.target.value === 'custom-tb' ? '' : 'none';
-});
+// ===== STATE =====
+let customFonts = {};
+let logoImageData = {};
+let bgImageData = null;
+let pulsingLogoImageData = null;
 
-// Font file upload handlers
-document.getElementById('djText-fontFile').addEventListener('change', (e) => {
+// Pulsing logo image upload
+document.getElementById('pulsingLogo-image').addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  document.getElementById('djText-fontFileName').textContent = file.name;
   const reader = new FileReader();
   reader.onload = () => {
-    customFonts.dj = reader.result;
-    const font = new FontFace('CustomDJ', 'url(' + reader.result + ')');
-    font.load().then((loaded) => {
-      document.fonts.add(loaded);
-      document.getElementById('djText-fontFileName').textContent = file.name + ' (loaded)';
-    });
-    const iframe = document.getElementById('preview');
-    iframe.contentWindow.postMessage({ type: 'LOAD_CUSTOM_FONT', name: 'CustomDJ', dataUrl: reader.result }, '*');
+    pulsingLogoImageData = reader.result;
+    document.getElementById('pulsingLogo-imageName').textContent = file.name;
+    document.getElementById('pulsingLogo-imageClear').style.display = '';
   };
   reader.readAsDataURL(file);
 });
 
-document.getElementById('textBox-fontFile').addEventListener('change', (e) => {
+document.getElementById('pulsingLogo-imageClear').addEventListener('click', () => {
+  pulsingLogoImageData = null;
+  document.getElementById('pulsingLogo-imageName').textContent = 'Default (Logo 1)';
+  document.getElementById('pulsingLogo-imageClear').style.display = 'none';
+  document.getElementById('pulsingLogo-image').value = '';
+});
+
+// ===== DYNAMIC PANEL: TEXT BOXES =====
+let textBoxIdCounter = 0;
+
+const DEFAULT_TEXTBOXES = [
+  {
+    text: "DJ's moss_b & TonyT",
+    yPosition: 0.72,
+    fontSize: 120,
+    fadeInTime: 5000,
+    fontFamily: '"Bungee", "Arial Black", sans-serif',
+    border: false,
+    borderWidth: 3,
+    borderColor: '#E8423F',
+    cornerRadius: 12,
+    paddingX: 40,
+    paddingY: 20,
+    textColor: '#FFFFFF'
+  },
+  {
+    text: "NEXT EVENT: SAT 9PM",
+    yPosition: 0.88,
+    fontSize: 80,
+    fadeInTime: 7000,
+    fontFamily: '"Bungee", "Arial Black", sans-serif',
+    border: true,
+    borderWidth: 3,
+    borderColor: '#E8423F',
+    cornerRadius: 12,
+    paddingX: 40,
+    paddingY: 20,
+    textColor: '#FFFFFF'
+  }
+];
+
+function createTextBoxPanel(config) {
+  const id = textBoxIdCounter++;
+  const panel = document.createElement('div');
+  panel.className = 'dynamic-panel';
+  panel.dataset.tbId = id;
+
+  const fontOptionsHtml = FONT_OPTIONS.map(f => {
+    const val = f.value === 'custom' ? 'custom-tb-' + id : f.value;
+    const escapedVal = val.replace(/"/g, '&quot;');
+    const selected = config.fontFamily === f.value || (f.value === 'custom' && config.fontFamily && config.fontFamily.startsWith('"CustomTB')) ? ' selected' : '';
+    return '<option value="' + escapedVal + '"' + selected + '>' + f.label + '</option>';
+  }).join('');
+
+  panel.innerHTML =
+    '<div class="panel-header"><span>Text Box ' + (id + 1) + '</span><button class="btn-remove" title="Remove">&times;</button></div>' +
+    '<div class="panel-body">' +
+      '<div class="field"><label>Text</label><input type="text" data-field="text" value="' + escapeAttr(config.text || '') + '"></div>' +
+      '<div class="field"><label>Font</label><select data-field="font">' + fontOptionsHtml + '</select></div>' +
+      '<div class="field font-upload" style="display:none;"><div class="font-upload-row">' +
+        '<label class="upload-btn">Upload font<input type="file" data-field="fontFile" accept=".ttf,.otf,.woff,.woff2" style="display:none;"></label>' +
+        '<span class="font-name">No file chosen</span>' +
+      '</div></div>' +
+      '<div class="field"><label>Y Position</label><input type="range" data-field="yPosition" min="0.1" max="0.98" step="0.01" value="' + (config.yPosition || 0.5) + '"><span class="range-value">' + (config.yPosition || 0.5).toFixed(2) + '</span></div>' +
+      '<div class="field"><label>Font Size</label><input type="range" data-field="fontSize" min="40" max="300" step="5" value="' + (config.fontSize || 80) + '"><span class="range-value">' + (config.fontSize || 80) + '</span></div>' +
+      '<div class="field"><label>Fade In Time (ms)</label><input type="number" data-field="fadeInTime" value="' + (config.fadeInTime || 5000) + '" min="0" max="30000" step="500"></div>' +
+      '<div class="field"><div class="color-row"><label>Text Colour</label><input type="color" data-field="textColor" value="' + (config.textColor || '#FFFFFF') + '"></div></div>' +
+      '<div class="field"><input type="checkbox" data-field="border"' + (config.border ? ' checked' : '') + '><span class="checkbox-label">Border</span></div>' +
+      '<div class="border-fields" style="' + (config.border ? '' : 'display:none;') + '">' +
+        '<div class="field"><label>Border Width (px)</label><input type="number" data-field="borderWidth" value="' + (config.borderWidth || 3) + '" min="1" max="10" step="1"></div>' +
+        '<div class="field"><div class="color-row"><label>Border Colour</label><input type="color" data-field="borderColor" value="' + (config.borderColor || '#E8423F') + '"></div></div>' +
+        '<div class="field"><label>Corner Radius (px)</label><input type="number" data-field="cornerRadius" value="' + (config.cornerRadius || 12) + '" min="0" max="40" step="2"></div>' +
+      '</div>' +
+    '</div>';
+
+  // Border toggle
+  const borderCheck = panel.querySelector('[data-field="border"]');
+  const borderFields = panel.querySelector('.border-fields');
+  borderCheck.addEventListener('change', () => {
+    borderFields.style.display = borderCheck.checked ? '' : 'none';
+  });
+
+  // Font select show/hide upload
+  const fontSelect = panel.querySelector('[data-field="font"]');
+  const fontUpload = panel.querySelector('.font-upload');
+  fontSelect.addEventListener('change', () => {
+    fontUpload.style.display = fontSelect.value.startsWith('custom') ? '' : 'none';
+  });
+  if (fontSelect.value.startsWith('custom')) fontUpload.style.display = '';
+
+  // Font file upload
+  const fontFileInput = panel.querySelector('[data-field="fontFile"]');
+  const fontNameSpan = panel.querySelector('.font-name');
+  fontFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    fontNameSpan.textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const fontName = 'CustomTB_' + id;
+      customFonts['tb_' + id] = reader.result;
+      const font = new FontFace(fontName, 'url(' + reader.result + ')');
+      font.load().then((loaded) => {
+        document.fonts.add(loaded);
+        fontNameSpan.textContent = file.name + ' (loaded)';
+      });
+      const iframe = document.getElementById('preview');
+      iframe.contentWindow.postMessage({ type: 'LOAD_CUSTOM_FONT', name: fontName, dataUrl: reader.result }, '*');
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // Range value display for all range inputs
+  panel.querySelectorAll('input[type="range"]').forEach(range => {
+    const valSpan = range.parentElement.querySelector('.range-value');
+    if (valSpan) {
+      range.addEventListener('input', () => {
+        valSpan.textContent = range.step.includes('.') ? parseFloat(range.value).toFixed(2) : range.value;
+      });
+    }
+  });
+
+  // Remove button
+  panel.querySelector('.btn-remove').addEventListener('click', () => {
+    panel.remove();
+  });
+
+  document.getElementById('textboxes-container').appendChild(panel);
+  return panel;
+}
+
+function gatherTextBoxes() {
+  const panels = document.querySelectorAll('#textboxes-container .dynamic-panel');
+  const boxes = [];
+  panels.forEach((panel, idx) => {
+    const get = (field) => panel.querySelector('[data-field="' + field + '"]');
+    const fontSel = get('font').value;
+    let fontFamily;
+    if (fontSel.startsWith('custom-tb-')) {
+      const tbId = fontSel.replace('custom-tb-', '');
+      fontFamily = customFonts['tb_' + tbId] ? '"CustomTB_' + tbId + '", sans-serif' : '"Arial Black", "Helvetica Neue", sans-serif';
+    } else {
+      fontFamily = fontSel;
+    }
+    boxes.push({
+      id: idx,
+      text: get('text').value,
+      yPosition: parseFloat(get('yPosition').value),
+      fontSize: parseInt(get('fontSize').value),
+      fadeInTime: parseInt(get('fadeInTime').value),
+      fontFamily: fontFamily,
+      border: get('border').checked,
+      borderWidth: parseInt(get('borderWidth').value),
+      borderColor: get('borderColor').value,
+      cornerRadius: parseInt(get('cornerRadius').value),
+      paddingX: 40,
+      paddingY: 20,
+      textColor: get('textColor').value
+    });
+  });
+  return boxes;
+}
+
+// ===== DYNAMIC PANEL: LOGOS =====
+let logoIdCounter = 0;
+
+const DEFAULT_LOGOS = [
+  {
+    imageData: null,
+    yPosition: 0.5,
+    size: 0.82,
+    fadeInTime: 960,
+    fadeOutTime: 800,
+    parallax: true,
+    parallaxStartY: -0.3,
+    parallaxDuration: 3000
+  }
+];
+
+function createLogoPanel(config, isFirst) {
+  const id = logoIdCounter++;
+  const panel = document.createElement('div');
+  panel.className = 'dynamic-panel';
+  panel.dataset.logoId = id;
+
+  const removeBtn = isFirst ? '' : '<button class="btn-remove" title="Remove">&times;</button>';
+
+  panel.innerHTML =
+    '<div class="panel-header"><span>Logo ' + (id + 1) + '</span>' + removeBtn + '</div>' +
+    '<div class="panel-body">' +
+      '<div class="field"><label>Image</label><div class="image-upload-row">' +
+        '<label class="upload-btn">Upload image<input type="file" data-field="imageFile" accept="image/*" style="display:none;"></label>' +
+        '<span class="image-name">' + (config.imageData ? 'Custom image' : 'Default (logo.png)') + '</span>' +
+        '<button class="btn-clear-image" data-field="clearImage" style="' + (config.imageData ? '' : 'display:none;') + '">Clear</button>' +
+      '</div></div>' +
+      '<div class="field"><label>Y Position</label><input type="range" data-field="yPosition" min="0.1" max="0.9" step="0.01" value="' + (config.yPosition || 0.5) + '"><span class="range-value">' + (config.yPosition || 0.5).toFixed(2) + '</span></div>' +
+      '<div class="field"><label>Size</label><input type="range" data-field="size" min="0.1" max="1.5" step="0.01" value="' + (config.size || 0.82) + '"><span class="range-value">' + (config.size || 0.82).toFixed(2) + '</span></div>' +
+      '<div class="field"><label>Fade In (ms)</label><input type="number" data-field="fadeInTime" value="' + (config.fadeInTime || 960) + '" min="100" max="5000" step="100"></div>' +
+      '<div class="field"><label>Fade Out (ms)</label><input type="number" data-field="fadeOutTime" value="' + (config.fadeOutTime || 800) + '" min="100" max="5000" step="100"></div>' +
+      '<div class="field"><input type="checkbox" data-field="parallax"' + (config.parallax !== false ? ' checked' : '') + '><span class="checkbox-label">Parallax entrance</span></div>' +
+      '<div class="parallax-fields" style="' + (config.parallax !== false ? '' : 'display:none;') + '">' +
+        '<div class="field"><label>Parallax Start Y</label><input type="range" data-field="parallaxStartY" min="-1.0" max="0.4" step="0.05" value="' + (config.parallaxStartY ?? -0.3) + '"><span class="range-value">' + (config.parallaxStartY ?? -0.3).toFixed(2) + '</span></div>' +
+        '<div class="field"><label>Parallax Duration (ms)</label><input type="number" data-field="parallaxDuration" value="' + (config.parallaxDuration || 3000) + '" min="500" max="10000" step="250"></div>' +
+      '</div>' +
+    '</div>';
+
+  // Parallax toggle
+  const parallaxCheck = panel.querySelector('[data-field="parallax"]');
+  const parallaxFields = panel.querySelector('.parallax-fields');
+  parallaxCheck.addEventListener('change', () => {
+    parallaxFields.style.display = parallaxCheck.checked ? '' : 'none';
+  });
+
+  // Range displays
+  panel.querySelectorAll('input[type="range"]').forEach(range => {
+    const valSpan = range.nextElementSibling;
+    if (valSpan && valSpan.classList.contains('range-value')) {
+      range.addEventListener('input', () => {
+        valSpan.textContent = parseFloat(range.value).toFixed(2);
+      });
+    }
+  });
+
+  // Image upload
+  const imgFileInput = panel.querySelector('[data-field="imageFile"]');
+  const imgNameSpan = panel.querySelector('.image-name');
+  const clearBtn = panel.querySelector('[data-field="clearImage"]');
+
+  imgFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      logoImageData[id] = reader.result;
+      imgNameSpan.textContent = file.name;
+      clearBtn.style.display = '';
+      const iframe = document.getElementById('preview');
+      iframe.contentWindow.postMessage({ type: 'LOAD_LOGO_IMAGE', id: id, dataUrl: reader.result }, '*');
+    };
+    reader.readAsDataURL(file);
+  });
+
+  clearBtn.addEventListener('click', () => {
+    delete logoImageData[id];
+    imgNameSpan.textContent = 'Default (logo.png)';
+    clearBtn.style.display = 'none';
+    imgFileInput.value = '';
+  });
+
+  // Remove button
+  const rmBtn = panel.querySelector('.btn-remove');
+  if (rmBtn) {
+    rmBtn.addEventListener('click', () => { panel.remove(); });
+  }
+
+  document.getElementById('logos-container').appendChild(panel);
+  return panel;
+}
+
+function gatherLogos() {
+  const panels = document.querySelectorAll('#logos-container .dynamic-panel');
+  const logos = [];
+  panels.forEach((panel, idx) => {
+    const get = (field) => panel.querySelector('[data-field="' + field + '"]');
+    const id = parseInt(panel.dataset.logoId);
+    logos.push({
+      id: idx,
+      imageData: logoImageData[id] || null,
+      yPosition: parseFloat(get('yPosition').value),
+      size: parseFloat(get('size').value),
+      fadeInTime: parseInt(get('fadeInTime').value),
+      fadeOutTime: parseInt(get('fadeOutTime').value),
+      parallax: get('parallax').checked,
+      parallaxStartY: parseFloat(get('parallaxStartY').value),
+      parallaxDuration: parseInt(get('parallaxDuration').value)
+    });
+  });
+  return logos;
+}
+
+// ===== DYNAMIC PANEL: BACKGROUND LOGOS =====
+let bgLogoIdCounter = 0;
+
+const DEFAULT_BGLOGOS = [
+  { scale: 2.2, y: 0.10, speed: 0.10, clockDir: 9, opacity: 0.30 },
+  { scale: 1.4, y: 0.22, speed: 0.16, clockDir: 3, opacity: 0.20 },
+  { scale: 0.8, y: 0.30, speed: 0.22, clockDir: 9, opacity: 0.15 },
+  { scale: 2.5, y: 0.55, speed: 0.07, clockDir: 3, opacity: 0.35 },
+  { scale: 1.0, y: 0.65, speed: 0.19, clockDir: 9, opacity: 0.18 },
+  { scale: 1.8, y: 0.78, speed: 0.13, clockDir: 3, opacity: 0.28 },
+  { scale: 0.6, y: 0.88, speed: 0.25, clockDir: 9, opacity: 0.12 },
+  { scale: 3.0, y: 0.45, speed: 0.05, clockDir: 9, opacity: 0.22 },
+];
+
+const CLOCK_DIR_NAMES = {
+  12: 'Up', 1: 'Up-Right', 2: 'Right-Up', 3: 'Right',
+  4: 'Right-Down', 5: 'Down-Right', 6: 'Down', 7: 'Down-Left',
+  8: 'Left-Down', 9: 'Left', 10: 'Left-Up', 11: 'Up-Left'
+};
+
+function getClockDir(config) {
+  if (config.clockDir != null) return config.clockDir;
+  return config.dir > 0 ? 3 : 9;
+}
+
+function buildClockFace(selectedDir) {
+  const r = 32;
+  const positions = [12,1,2,3,4,5,6,7,8,9,10,11];
+  let dots = '';
+  positions.forEach(pos => {
+    const angle = (pos % 12) * 30 * Math.PI / 180;
+    const x = 40 + r * Math.sin(angle);
+    const y = 40 - r * Math.cos(angle);
+    const sel = pos === selectedDir ? ' selected' : '';
+    dots += '<div class="clock-dot' + sel + '" data-clock="' + pos + '" style="left:' + x.toFixed(1) + 'px;top:' + y.toFixed(1) + 'px;" title="' + pos + ' (' + CLOCK_DIR_NAMES[pos] + ')"></div>';
+  });
+  const arrowAngle = (selectedDir % 12) * 30;
+  const arrowLen = 24;
+  dots += '<div class="clock-arrow" style="height:' + arrowLen + 'px;transform:translate(-50%,-100%) rotate(' + arrowAngle + 'deg);"></div>';
+  return '<div class="clock-face">' + dots + '</div>';
+}
+
+let bgLogoImageData = {};
+
+function createBgLogoPanel(config) {
+  const id = bgLogoIdCounter++;
+  const panel = document.createElement('div');
+  panel.className = 'dynamic-panel';
+  panel.dataset.bgId = id;
+
+  const cd = getClockDir(config);
+  const isVertical = cd === 12 || cd === 6;
+  const posLabel = isVertical ? 'X Position' : 'Y Position';
+
+  panel.innerHTML =
+    '<div class="panel-header"><span>BG Logo ' + (id + 1) + '</span><button class="btn-remove" title="Remove">&times;</button></div>' +
+    '<div class="panel-body">' +
+      '<div class="field"><label>Logo Image</label><div class="image-upload-row">' +
+        '<label class="upload-btn">Upload image<input type="file" data-field="bgLogoImage" accept="image/*" style="display:none;"></label>' +
+        '<span class="image-name">' + (config.imageData ? 'Custom image' : 'Default (logo.png)') + '</span>' +
+        '<button class="btn-clear-image" data-field="clearBgLogoImage" style="' + (config.imageData ? '' : 'display:none;') + '">Clear</button>' +
+      '</div></div>' +
+      '<div class="field"><label>Scale</label><input type="range" data-field="scale" min="0.3" max="4.0" step="0.1" value="' + (config.scale || 1.0) + '"><span class="range-value">' + (config.scale || 1.0).toFixed(1) + '</span></div>' +
+      '<div class="field"><label class="pos-label">' + posLabel + '</label><input type="range" data-field="y" min="0.0" max="1.0" step="0.01" value="' + (config.y || 0.5) + '"><span class="range-value">' + (config.y || 0.5).toFixed(2) + '</span></div>' +
+      '<div class="field"><label>Speed</label><input type="range" data-field="speed" min="0.01" max="0.50" step="0.01" value="' + (config.speed || 0.10) + '"><span class="range-value">' + (config.speed || 0.10).toFixed(2) + '</span></div>' +
+      '<div class="field"><label>Direction</label><div class="clock-face-wrap">' + buildClockFace(cd) + '<div class="clock-label"><span class="dir-name">' + cd + ' (' + CLOCK_DIR_NAMES[cd] + ')</span></div></div></div>' +
+      '<div class="field"><label>Opacity</label><input type="range" data-field="opacity" min="0.05" max="0.50" step="0.01" value="' + (config.opacity || 0.20) + '"><span class="range-value">' + (config.opacity || 0.20).toFixed(2) + '</span></div>' +
+    '</div>';
+
+  // Clock-face direction clicks
+  panel.querySelectorAll('.clock-dot').forEach(dot => {
+    dot.addEventListener('click', () => {
+      panel.querySelectorAll('.clock-dot').forEach(d => d.classList.remove('selected'));
+      dot.classList.add('selected');
+      const dir = parseInt(dot.dataset.clock);
+      panel.querySelector('.clock-label .dir-name').textContent = dir + ' (' + CLOCK_DIR_NAMES[dir] + ')';
+      const arrowAngle = (dir % 12) * 30;
+      panel.querySelector('.clock-arrow').style.transform = 'translate(-50%,-100%) rotate(' + arrowAngle + 'deg)';
+      const isVert = dir === 12 || dir === 6;
+      panel.querySelector('.pos-label').textContent = isVert ? 'X Position' : 'Y Position';
+    });
+  });
+
+  // Image upload
+  const imgFileInput = panel.querySelector('[data-field="bgLogoImage"]');
+  const imgNameSpan = panel.querySelector('.image-name');
+  const clearBtn = panel.querySelector('[data-field="clearBgLogoImage"]');
+
+  imgFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      bgLogoImageData[id] = reader.result;
+      imgNameSpan.textContent = file.name;
+      clearBtn.style.display = '';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  clearBtn.addEventListener('click', () => {
+    delete bgLogoImageData[id];
+    imgNameSpan.textContent = 'Default (logo.png)';
+    clearBtn.style.display = 'none';
+    imgFileInput.value = '';
+  });
+
+  // Range displays
+  panel.querySelectorAll('input[type="range"]').forEach(range => {
+    const valSpan = range.nextElementSibling;
+    if (valSpan && valSpan.classList.contains('range-value')) {
+      range.addEventListener('input', () => {
+        valSpan.textContent = parseFloat(range.value).toFixed(2);
+      });
+    }
+  });
+
+  // Remove
+  panel.querySelector('.btn-remove').addEventListener('click', () => {
+    delete bgLogoImageData[id];
+    panel.remove();
+  });
+
+  document.getElementById('bglogos-container').appendChild(panel);
+  return panel;
+}
+
+function gatherBgLogos() {
+  const panels = document.querySelectorAll('#bglogos-container .dynamic-panel');
+  const bgLogos = [];
+  panels.forEach(panel => {
+    const get = (field) => panel.querySelector('[data-field="' + field + '"]');
+    const id = parseInt(panel.dataset.bgId);
+    const selectedDot = panel.querySelector('.clock-dot.selected');
+    bgLogos.push({
+      scale: parseFloat(get('scale').value),
+      y: parseFloat(get('y').value),
+      speed: parseFloat(get('speed').value),
+      clockDir: selectedDot ? parseInt(selectedDot.dataset.clock) : 9,
+      opacity: parseFloat(get('opacity').value),
+      imageData: bgLogoImageData[id] || null
+    });
+  });
+  return bgLogos;
+}
+
+// ===== HELPER =====
+function escapeAttr(s) {
+  return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ===== BACKGROUND IMAGE =====
+document.getElementById('global-bgImage').addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  document.getElementById('textBox-fontFileName').textContent = file.name;
   const reader = new FileReader();
   reader.onload = () => {
-    customFonts.tb = reader.result;
-    const font = new FontFace('CustomTB', 'url(' + reader.result + ')');
-    font.load().then((loaded) => {
-      document.fonts.add(loaded);
-      document.getElementById('textBox-fontFileName').textContent = file.name + ' (loaded)';
-    });
+    bgImageData = reader.result;
+    document.getElementById('global-bgImageName').textContent = file.name;
+    document.getElementById('global-bgImageClear').style.display = '';
     const iframe = document.getElementById('preview');
-    iframe.contentWindow.postMessage({ type: 'LOAD_CUSTOM_FONT', name: 'CustomTB', dataUrl: reader.result }, '*');
+    iframe.contentWindow.postMessage({ type: 'LOAD_BG_IMAGE', dataUrl: reader.result }, '*');
   };
   reader.readAsDataURL(file);
 });
 
+document.getElementById('global-bgImageClear').addEventListener('click', () => {
+  bgImageData = null;
+  document.getElementById('global-bgImageName').textContent = 'No image';
+  document.getElementById('global-bgImageClear').style.display = 'none';
+  document.getElementById('global-bgImage').value = '';
+  const iframe = document.getElementById('preview');
+  iframe.contentWindow.postMessage({ type: 'LOAD_BG_IMAGE', dataUrl: null }, '*');
+});
+
+// ===== GATHER CONFIG =====
 function gatherConfig() {
   return {
     global: {
       duration: parseInt(document.getElementById('global-duration').value),
-      bpm: parseInt(document.getElementById('global-bpm').value)
+      bpm: parseInt(document.getElementById('global-bpm').value),
+      bgColor: document.getElementById('global-bgColor').value,
+      bgImageData: bgImageData
     },
-    mainLogo: {
-      yPosition: parseFloat(document.getElementById('mainLogo-yPosition').value),
-      size: parseFloat(document.getElementById('mainLogo-size').value),
-      fadeInTime: parseInt(document.getElementById('mainLogo-fadeInTime').value),
-      fadeOutTime: parseInt(document.getElementById('mainLogo-fadeOutTime').value),
-      parallax: document.getElementById('mainLogo-parallax').checked,
-      parallaxStartY: parseFloat(document.getElementById('mainLogo-parallaxStartY').value),
-      parallaxDuration: parseInt(document.getElementById('mainLogo-parallaxDuration').value)
-    },
+    logos: gatherLogos(),
     pulsingLogo: {
       enabled: document.getElementById('pulsingLogo-enabled').checked,
       yPosition: parseFloat(document.getElementById('pulsingLogo-yPosition').value),
       startTime: parseInt(document.getElementById('pulsingLogo-startTime').value),
       opacity: parseFloat(document.getElementById('pulsingLogo-opacity').value),
-      maxScale: parseFloat(document.getElementById('pulsingLogo-maxScale').value)
+      maxScale: parseFloat(document.getElementById('pulsingLogo-maxScale').value),
+      imageData: pulsingLogoImageData
     },
-    djText: {
-      text: document.getElementById('djText-text').value,
-      yPosition: parseFloat(document.getElementById('djText-yPosition').value),
-      fontSize: parseInt(document.getElementById('djText-fontSize').value),
-      fadeInTime: parseInt(document.getElementById('djText-fadeInTime').value),
-      fontFamily: getDjFontFamily()
-    },
-    textBox: {
-      enabled: document.getElementById('textBox-enabled').checked,
-      text: document.getElementById('textBox-text').value,
-      yPosition: parseFloat(document.getElementById('textBox-yPosition').value),
-      fontSize: parseInt(document.getElementById('textBox-fontSize').value),
-      borderWidth: parseInt(document.getElementById('textBox-borderWidth').value),
-      cornerRadius: parseInt(document.getElementById('textBox-cornerRadius').value),
-      fadeInTime: parseInt(document.getElementById('textBox-fadeInTime').value),
-      paddingX: 40,
-      paddingY: 20,
-      fontFamily: getTbFontFamily()
-    },
+    textBoxes: gatherTextBoxes(),
     spectrum: {
+      enabled: document.getElementById('spectrum-enabled').checked,
       height: parseInt(document.getElementById('spectrum-height').value),
       bottomOffset: parseInt(document.getElementById('spectrum-bottomOffset').value),
       barCount: parseInt(document.getElementById('spectrum-barCount').value)
     },
     waveform: {
+      enabled: document.getElementById('waveform-enabled').checked,
       yCenter: parseFloat(document.getElementById('waveform-yCenter').value),
       height: parseInt(document.getElementById('waveform-height').value),
       lineWidth: parseInt(document.getElementById('waveform-lineWidth').value)
     },
+    bgLogos: gatherBgLogos(),
     effects: {
       glitch: document.getElementById('effects-glitch').checked,
       scanlines: document.getElementById('effects-scanlines').checked,
@@ -893,70 +1417,284 @@ function gatherConfig() {
 function sendConfig() {
   const config = gatherConfig();
   const iframe = document.getElementById('preview');
-  iframe.contentWindow.postMessage({ type: 'CONFIG_UPDATE', config }, '*');
+  // Send logo images that have custom data
+  config.logos.forEach((logo, idx) => {
+    if (logo.imageData) {
+      iframe.contentWindow.postMessage({ type: 'LOAD_LOGO_IMAGE', id: idx, dataUrl: logo.imageData }, '*');
+    }
+  });
+  // Send pulsing logo image
+  iframe.contentWindow.postMessage({ type: 'LOAD_PULSING_LOGO_IMAGE', dataUrl: config.pulsingLogo.imageData }, '*');
+  // Send bg image
+  if (config.global.bgImageData) {
+    iframe.contentWindow.postMessage({ type: 'LOAD_BG_IMAGE', dataUrl: config.global.bgImageData }, '*');
+  }
+  // Send bgLogo images that have custom data
+  config.bgLogos.forEach((bg, idx) => {
+    if (bg.imageData) {
+      iframe.contentWindow.postMessage({ type: 'LOAD_BGLOGO_IMAGE', index: idx, dataUrl: bg.imageData }, '*');
+    }
+  });
+  // Send custom fonts
+  Object.keys(customFonts).forEach(key => {
+    const fontName = 'CustomTB_' + key.replace('tb_', '');
+    iframe.contentWindow.postMessage({ type: 'LOAD_CUSTOM_FONT', name: fontName, dataUrl: customFonts[key] }, '*');
+  });
+  // Strip image data from config to keep postMessage fast (images sent separately above)
+  const configToSend = JSON.parse(JSON.stringify(config));
+  configToSend.logos.forEach(l => { l.imageData = null; });
+  configToSend.bgLogos.forEach(l => { l.imageData = null; });
+  configToSend.global.bgImageData = null;
+  configToSend.pulsingLogo.imageData = null;
+  iframe.contentWindow.postMessage({ type: 'CONFIG_UPDATE', config: configToSend }, '*');
 }
 
-// Update button
+// ===== BUTTONS =====
 document.getElementById('btn-update').addEventListener('click', sendConfig);
 
-// Reset defaults
-document.getElementById('btn-reset').addEventListener('click', () => {
-  document.getElementById('global-duration').value = 16000;
-  document.getElementById('global-bpm').value = 124;
-  document.getElementById('mainLogo-yPosition').value = 0.5;
-  document.getElementById('mainLogo-size').value = 0.82;
-  document.getElementById('mainLogo-fadeInTime').value = 960;
-  document.getElementById('mainLogo-fadeOutTime').value = 800;
-  document.getElementById('mainLogo-parallax').checked = true;
-  document.getElementById('mainLogo-parallaxStartY').value = -0.3;
-  document.getElementById('mainLogo-parallaxDuration').value = 3000;
-  document.getElementById('pulsingLogo-enabled').checked = true;
-  document.getElementById('pulsingLogo-yPosition').value = 0.34;
-  document.getElementById('pulsingLogo-startTime').value = 10000;
-  document.getElementById('pulsingLogo-opacity').value = 0.85;
-  document.getElementById('pulsingLogo-maxScale').value = 2.0;
-  document.getElementById('djText-text').value = "DJ's moss_b & TonyT";
-  document.getElementById('djText-font').value = '"Arial Black", "Helvetica Neue", sans-serif';
-  document.getElementById('djText-upload-field').style.display = 'none';
-  document.getElementById('djText-yPosition').value = 0.72;
-  document.getElementById('djText-fontSize').value = 64;
-  document.getElementById('djText-fadeInTime').value = 5000;
-  document.getElementById('textBox-enabled').checked = true;
-  document.getElementById('textBox-text').value = "NEXT EVENT: SAT 9PM";
-  document.getElementById('textBox-font').value = '"Arial Black", "Helvetica Neue", sans-serif';
-  document.getElementById('textBox-upload-field').style.display = 'none';
-  document.getElementById('textBox-yPosition').value = 0.88;
-  document.getElementById('textBox-fontSize').value = 42;
-  document.getElementById('textBox-borderWidth').value = 3;
-  document.getElementById('textBox-cornerRadius').value = 12;
-  document.getElementById('textBox-fadeInTime').value = 7000;
-  document.getElementById('spectrum-height').value = 900;
-  document.getElementById('spectrum-bottomOffset').value = 40;
-  document.getElementById('spectrum-barCount').value = 32;
-  document.getElementById('waveform-yCenter').value = 0.61;
-  document.getElementById('waveform-height').value = 1200;
-  document.getElementById('waveform-lineWidth').value = 6;
-  document.getElementById('effects-glitch').checked = true;
-  document.getElementById('effects-scanlines').checked = true;
-  document.getElementById('effects-grid').checked = true;
-  document.getElementById('effects-sweeps').checked = true;
-  document.getElementById('effects-cornerAccents').checked = true;
-  document.getElementById('effects-vignette').checked = true;
+let labelsVisible = false;
+document.getElementById('btn-labels').addEventListener('click', () => {
+  labelsVisible = !labelsVisible;
+  const iframe = document.getElementById('preview');
+  iframe.contentWindow.postMessage({ type: labelsVisible ? 'SHOW_LABELS' : 'HIDE_LABELS' }, '*');
+  const btn = document.getElementById('btn-labels');
+  btn.textContent = labelsVisible ? 'Hide Labels' : 'Show Labels';
+  btn.style.background = labelsVisible ? '#E8423F' : '';
+});
 
-  // Update range display values
-  document.querySelectorAll('input[type="range"]').forEach(range => {
+document.getElementById('btn-add-textbox').addEventListener('click', () => {
+  createTextBoxPanel({
+    text: 'New text',
+    yPosition: 0.5,
+    fontSize: 80,
+    fadeInTime: 5000,
+    fontFamily: '"Bungee", "Arial Black", sans-serif',
+    border: false,
+    borderWidth: 3,
+    borderColor: '#E8423F',
+    cornerRadius: 12,
+    paddingX: 40,
+    paddingY: 20,
+    textColor: '#FFFFFF'
+  });
+});
+
+document.getElementById('btn-add-logo').addEventListener('click', () => {
+  createLogoPanel({
+    imageData: null,
+    yPosition: 0.5,
+    size: 0.5,
+    fadeInTime: 960,
+    fadeOutTime: 800,
+    parallax: true,
+    parallaxStartY: -0.3,
+    parallaxDuration: 3000
+  }, false);
+});
+
+document.getElementById('btn-add-bglogo').addEventListener('click', () => {
+  createBgLogoPanel({
+    scale: 1.0,
+    y: 0.5,
+    speed: 0.10,
+    clockDir: 9,
+    opacity: 0.20
+  });
+});
+
+// ===== APPLY CONFIG TO FORM =====
+function applyConfigToForm(c) {
+  // Global
+  if (c.global) {
+    document.getElementById('global-duration').value = c.global.duration || 16000;
+    document.getElementById('global-bpm').value = c.global.bpm || 124;
+    document.getElementById('global-bgColor').value = c.global.bgColor || '#000000';
+    if (c.global.bgImageData) {
+      bgImageData = c.global.bgImageData;
+      document.getElementById('global-bgImageName').textContent = 'Saved image';
+      document.getElementById('global-bgImageClear').style.display = '';
+    } else {
+      bgImageData = null;
+      document.getElementById('global-bgImageName').textContent = 'No image';
+      document.getElementById('global-bgImageClear').style.display = 'none';
+    }
+  }
+
+  // Pulsing Logo
+  if (c.pulsingLogo) {
+    document.getElementById('pulsingLogo-enabled').checked = c.pulsingLogo.enabled !== false;
+    document.getElementById('pulsingLogo-yPosition').value = c.pulsingLogo.yPosition ?? 0.34;
+    document.getElementById('pulsingLogo-startTime').value = c.pulsingLogo.startTime ?? 10000;
+    document.getElementById('pulsingLogo-opacity').value = c.pulsingLogo.opacity ?? 0.85;
+    document.getElementById('pulsingLogo-maxScale').value = c.pulsingLogo.maxScale ?? 2.0;
+    if (c.pulsingLogo.imageData) {
+      pulsingLogoImageData = c.pulsingLogo.imageData;
+      document.getElementById('pulsingLogo-imageName').textContent = 'Custom image';
+      document.getElementById('pulsingLogo-imageClear').style.display = '';
+    } else {
+      pulsingLogoImageData = null;
+      document.getElementById('pulsingLogo-imageName').textContent = 'Default (Logo 1)';
+      document.getElementById('pulsingLogo-imageClear').style.display = 'none';
+    }
+  }
+
+  // Logos — clear and recreate
+  document.getElementById('logos-container').innerHTML = '';
+  logoIdCounter = 0;
+  logoImageData = {};
+  const logos = c.logos || DEFAULT_LOGOS;
+  logos.forEach((logo, idx) => {
+    if (logo.imageData) logoImageData[idx] = logo.imageData;
+    createLogoPanel(logo, idx === 0);
+  });
+
+  // Text boxes — clear and recreate
+  document.getElementById('textboxes-container').innerHTML = '';
+  textBoxIdCounter = 0;
+  customFonts = {};
+  // Handle old format (djText + textBox)
+  let textBoxes;
+  if (c.textBoxes) {
+    textBoxes = c.textBoxes;
+  } else {
+    textBoxes = [];
+    if (c.djText) {
+      textBoxes.push({
+        text: c.djText.text || '',
+        yPosition: c.djText.yPosition ?? 0.72,
+        fontSize: c.djText.fontSize ?? 64,
+        fadeInTime: c.djText.fadeInTime ?? 5000,
+        fontFamily: c.djText.fontFamily || '"Arial Black", "Helvetica Neue", sans-serif',
+        border: false,
+        borderWidth: 3,
+        borderColor: '#E8423F',
+        cornerRadius: 12,
+        paddingX: 40,
+        paddingY: 20,
+        textColor: '#FFFFFF'
+      });
+    }
+    if (c.textBox) {
+      textBoxes.push({
+        text: c.textBox.text || '',
+        yPosition: c.textBox.yPosition ?? 0.88,
+        fontSize: c.textBox.fontSize ?? 42,
+        fadeInTime: c.textBox.fadeInTime ?? 7000,
+        fontFamily: c.textBox.fontFamily || '"Arial Black", "Helvetica Neue", sans-serif',
+        border: true,
+        borderWidth: c.textBox.borderWidth ?? 3,
+        borderColor: '#E8423F',
+        cornerRadius: c.textBox.cornerRadius ?? 12,
+        paddingX: c.textBox.paddingX ?? 40,
+        paddingY: c.textBox.paddingY ?? 20,
+        textColor: '#FFFFFF'
+      });
+    }
+    // Handle old mainLogo format
+    if (c.mainLogo && !c.logos) {
+      document.getElementById('logos-container').innerHTML = '';
+      logoIdCounter = 0;
+      logoImageData = {};
+      createLogoPanel({
+        imageData: null,
+        yPosition: c.mainLogo.yPosition ?? 0.5,
+        size: c.mainLogo.size ?? 0.82,
+        fadeInTime: c.mainLogo.fadeInTime ?? 960,
+        fadeOutTime: c.mainLogo.fadeOutTime ?? 800,
+        parallax: c.mainLogo.parallax !== false,
+        parallaxStartY: c.mainLogo.parallaxStartY ?? -0.3,
+        parallaxDuration: c.mainLogo.parallaxDuration ?? 3000
+      }, true);
+    }
+  }
+  if (textBoxes.length === 0) textBoxes = DEFAULT_TEXTBOXES;
+  textBoxes.forEach(tb => createTextBoxPanel(tb));
+
+  // Spectrum
+  if (c.spectrum) {
+    document.getElementById('spectrum-enabled').checked = c.spectrum.enabled !== false;
+    document.getElementById('spectrum-height').value = c.spectrum.height ?? 900;
+    document.getElementById('spectrum-bottomOffset').value = c.spectrum.bottomOffset ?? 40;
+    document.getElementById('spectrum-barCount').value = c.spectrum.barCount ?? 32;
+  }
+
+  // Waveform
+  if (c.waveform) {
+    document.getElementById('waveform-enabled').checked = c.waveform.enabled !== false;
+    document.getElementById('waveform-yCenter').value = c.waveform.yCenter ?? 0.61;
+    document.getElementById('waveform-height').value = c.waveform.height ?? 1200;
+    document.getElementById('waveform-lineWidth').value = c.waveform.lineWidth ?? 6;
+  }
+
+  // Background Logos — clear and recreate
+  document.getElementById('bglogos-container').innerHTML = '';
+  bgLogoIdCounter = 0;
+  bgLogoImageData = {};
+  const bgLogos = c.bgLogos || DEFAULT_BGLOGOS;
+  bgLogos.forEach((bg, idx) => {
+    if (bg.imageData) bgLogoImageData[idx] = bg.imageData;
+    createBgLogoPanel(bg);
+  });
+
+  // Effects
+  if (c.effects) {
+    document.getElementById('effects-glitch').checked = c.effects.glitch !== false;
+    document.getElementById('effects-scanlines').checked = c.effects.scanlines !== false;
+    document.getElementById('effects-grid').checked = c.effects.grid !== false;
+    document.getElementById('effects-sweeps').checked = c.effects.sweeps !== false;
+    document.getElementById('effects-cornerAccents').checked = c.effects.cornerAccents !== false;
+    document.getElementById('effects-vignette').checked = c.effects.vignette !== false;
+  }
+
+  // Refresh range value displays for static controls
+  document.querySelectorAll('#sidebar > .section input[type="range"]').forEach(range => {
     const valSpan = document.getElementById(range.id + '-val');
     if (valSpan) valSpan.textContent = parseFloat(range.value).toFixed(2);
   });
+}
 
+// ===== SAVE AS DEFAULT =====
+const DEFAULTS_KEY = 'version1_defaults';
+
+function getFactoryConfig() {
+  return {
+    global: { duration: 16000, bpm: 124, bgColor: '#000000', bgImageData: null },
+    logos: DEFAULT_LOGOS,
+    pulsingLogo: { enabled: true, yPosition: 0.34, startTime: 10000, opacity: 0.85, maxScale: 2.0 },
+    textBoxes: DEFAULT_TEXTBOXES,
+    spectrum: { enabled: true, height: 900, bottomOffset: 40, barCount: 32 },
+    waveform: { enabled: true, yCenter: 0.61, height: 1200, lineWidth: 6 },
+    bgLogos: DEFAULT_BGLOGOS,
+    effects: { glitch: true, scanlines: true, grid: true, sweeps: true, cornerAccents: true, vignette: true }
+  };
+}
+
+document.getElementById('btn-save-defaults').addEventListener('click', () => {
+  const config = gatherConfig();
+  config.logos.forEach(l => { l.imageData = null; });
+  config.bgLogos.forEach(l => { l.imageData = null; });
+  config.global.bgImageData = null;
+  config.pulsingLogo.imageData = null;
+  try {
+    localStorage.setItem(DEFAULTS_KEY, JSON.stringify(config));
+    const btn = document.getElementById('btn-save-defaults');
+    btn.textContent = 'Saved!';
+    setTimeout(() => { btn.textContent = 'Save as Default'; }, 1500);
+  } catch (e) {
+    alert('Failed to save defaults: ' + e.message);
+  }
+});
+
+// ===== RESET DEFAULTS =====
+document.getElementById('btn-reset').addEventListener('click', () => {
+  localStorage.removeItem(DEFAULTS_KEY);
+  applyConfigToForm(getFactoryConfig());
   sendConfig();
 });
 
-// Download standalone HTML
+// ===== DOWNLOAD =====
 document.getElementById('btn-download').addEventListener('click', async () => {
   const config = gatherConfig();
-  const iframe = document.getElementById('preview');
-
   try {
     const response = await fetch('version1_animation_v5.html');
     let html = await response.text();
@@ -979,24 +1717,47 @@ document.getElementById('btn-download').addEventListener('click', async () => {
   }
 });
 
-// --- VIDEO RECORDING ---
+// ===== VIDEO RECORDING =====
 let recordingTotalMs = 0;
 
+let recordingTimeout = null;
+
 document.getElementById('btn-record').addEventListener('click', () => {
-  sendConfig();
+  try {
+    sendConfig();
+  } catch (err) {
+    alert('Failed to send config: ' + err.message);
+    return;
+  }
   const loops = parseInt(document.getElementById('record-loops').value) || 1;
   const duration = parseInt(document.getElementById('global-duration').value);
   recordingTotalMs = duration * loops;
 
   const iframe = document.getElementById('preview');
-  iframe.contentWindow.postMessage({ type: 'START_RECORDING', loops }, '*');
   document.getElementById('btn-record').disabled = true;
+
+  try {
+    iframe.contentWindow.postMessage({ type: 'START_RECORDING', loops }, '*');
+  } catch (err) {
+    alert('Cannot communicate with preview. Try refreshing the page.');
+    document.getElementById('btn-record').disabled = false;
+    return;
+  }
+
+  recordingTimeout = setTimeout(() => {
+    const overlay = document.getElementById('recording-overlay');
+    if (!overlay.classList.contains('active')) {
+      document.getElementById('btn-record').disabled = false;
+      alert('Recording failed to start. This can happen if:\n\n1. Brave browser is blocking canvas capture — try Chrome or Safari instead\n2. The preview hasn\'t loaded yet — wait a moment and try again');
+    }
+  }, 3000);
 });
 
 window.addEventListener('message', (e) => {
   if (!e.data) return;
 
   if (e.data.type === 'RECORDING_STARTED') {
+    if (recordingTimeout) { clearTimeout(recordingTimeout); recordingTimeout = null; }
     const overlay = document.getElementById('recording-overlay');
     overlay.classList.add('active');
     document.getElementById('rec-progress').style.width = '0%';
@@ -1016,10 +1777,28 @@ window.addEventListener('message', (e) => {
     document.getElementById('rec-time').textContent = formatTime(elapsedSec) + ' / ' + formatTime(totalSec);
   }
 
+  if (e.data.type === 'RECORDING_ERROR') {
+    if (recordingTimeout) { clearTimeout(recordingTimeout); recordingTimeout = null; }
+    const overlay = document.getElementById('recording-overlay');
+    overlay.classList.remove('active');
+    document.getElementById('btn-record').disabled = false;
+    alert(e.data.error || 'Recording failed.');
+  }
+
   if (e.data.type === 'RECORDING_COMPLETE') {
     const overlay = document.getElementById('recording-overlay');
     document.getElementById('rec-progress').style.width = '100%';
     document.getElementById('rec-time').textContent = 'Download started!';
+
+    // Download the recorded video from the parent window
+    if (e.data.dataUrl) {
+      const a = document.createElement('a');
+      a.href = e.data.dataUrl;
+      a.download = e.data.filename || 'version1_animation.webm';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
 
     setTimeout(() => {
       overlay.classList.remove('active');
@@ -1034,7 +1813,7 @@ function formatTime(sec) {
   return m + ':' + String(s).padStart(2, '0');
 }
 
-// --- PRESETS (localStorage) ---
+// ===== PRESETS (localStorage) =====
 const STORAGE_KEY = 'version1_presets';
 
 function getPresets() {
@@ -1081,7 +1860,12 @@ document.getElementById('btn-preset-save').addEventListener('click', () => {
     return;
   }
   const presets = getPresets();
-  presets[name] = gatherConfig();
+  const config = gatherConfig();
+  // Strip large image dataURLs to avoid filling localStorage
+  config.logos.forEach(l => { l.imageData = null; });
+  config.bgLogos.forEach(l => { l.imageData = null; });
+  config.global.bgImageData = null;
+  presets[name] = config;
   savePresets(presets);
   refreshPresetList();
   document.getElementById('preset-list').value = name;
@@ -1100,79 +1884,6 @@ document.getElementById('btn-preset-load').addEventListener('click', () => {
   applyConfigToForm(config);
   sendConfig();
 });
-
-function applyConfigToForm(c) {
-  if (c.global) {
-    document.getElementById('global-duration').value = c.global.duration || 16000;
-    document.getElementById('global-bpm').value = c.global.bpm || 124;
-  }
-  if (c.mainLogo) {
-    document.getElementById('mainLogo-yPosition').value = c.mainLogo.yPosition ?? 0.5;
-    document.getElementById('mainLogo-size').value = c.mainLogo.size ?? 0.82;
-    document.getElementById('mainLogo-fadeInTime').value = c.mainLogo.fadeInTime ?? 960;
-    document.getElementById('mainLogo-fadeOutTime').value = c.mainLogo.fadeOutTime ?? 800;
-    document.getElementById('mainLogo-parallax').checked = c.mainLogo.parallax !== false;
-    document.getElementById('mainLogo-parallaxStartY').value = c.mainLogo.parallaxStartY ?? -0.3;
-    document.getElementById('mainLogo-parallaxDuration').value = c.mainLogo.parallaxDuration ?? 3000;
-  }
-  if (c.pulsingLogo) {
-    document.getElementById('pulsingLogo-enabled').checked = c.pulsingLogo.enabled !== false;
-    document.getElementById('pulsingLogo-yPosition').value = c.pulsingLogo.yPosition ?? 0.34;
-    document.getElementById('pulsingLogo-startTime').value = c.pulsingLogo.startTime ?? 10000;
-    document.getElementById('pulsingLogo-opacity').value = c.pulsingLogo.opacity ?? 0.85;
-    document.getElementById('pulsingLogo-maxScale').value = c.pulsingLogo.maxScale ?? 2.0;
-  }
-  if (c.djText) {
-    document.getElementById('djText-text').value = c.djText.text || "DJ's moss_b & TonyT";
-    document.getElementById('djText-yPosition').value = c.djText.yPosition ?? 0.72;
-    document.getElementById('djText-fontSize').value = c.djText.fontSize ?? 64;
-    document.getElementById('djText-fadeInTime').value = c.djText.fadeInTime ?? 5000;
-    if (c.djText.fontFamily) {
-      const djSel = document.getElementById('djText-font');
-      const match = Array.from(djSel.options).find(o => o.value === c.djText.fontFamily);
-      djSel.value = match ? c.djText.fontFamily : djSel.options[0].value;
-      document.getElementById('djText-upload-field').style.display = 'none';
-    }
-  }
-  if (c.textBox) {
-    document.getElementById('textBox-enabled').checked = c.textBox.enabled !== false;
-    document.getElementById('textBox-text').value = c.textBox.text || '';
-    document.getElementById('textBox-yPosition').value = c.textBox.yPosition ?? 0.88;
-    document.getElementById('textBox-fontSize').value = c.textBox.fontSize ?? 42;
-    document.getElementById('textBox-borderWidth').value = c.textBox.borderWidth ?? 3;
-    document.getElementById('textBox-cornerRadius').value = c.textBox.cornerRadius ?? 12;
-    document.getElementById('textBox-fadeInTime').value = c.textBox.fadeInTime ?? 7000;
-    if (c.textBox.fontFamily) {
-      const tbSel = document.getElementById('textBox-font');
-      const match = Array.from(tbSel.options).find(o => o.value === c.textBox.fontFamily);
-      tbSel.value = match ? c.textBox.fontFamily : tbSel.options[0].value;
-      document.getElementById('textBox-upload-field').style.display = 'none';
-    }
-  }
-  if (c.spectrum) {
-    document.getElementById('spectrum-height').value = c.spectrum.height ?? 900;
-    document.getElementById('spectrum-bottomOffset').value = c.spectrum.bottomOffset ?? 40;
-    document.getElementById('spectrum-barCount').value = c.spectrum.barCount ?? 32;
-  }
-  if (c.waveform) {
-    document.getElementById('waveform-yCenter').value = c.waveform.yCenter ?? 0.61;
-    document.getElementById('waveform-height').value = c.waveform.height ?? 1200;
-    document.getElementById('waveform-lineWidth').value = c.waveform.lineWidth ?? 6;
-  }
-  if (c.effects) {
-    document.getElementById('effects-glitch').checked = c.effects.glitch !== false;
-    document.getElementById('effects-scanlines').checked = c.effects.scanlines !== false;
-    document.getElementById('effects-grid').checked = c.effects.grid !== false;
-    document.getElementById('effects-sweeps').checked = c.effects.sweeps !== false;
-    document.getElementById('effects-cornerAccents').checked = c.effects.cornerAccents !== false;
-    document.getElementById('effects-vignette').checked = c.effects.vignette !== false;
-  }
-  // Refresh range value displays
-  document.querySelectorAll('input[type="range"]').forEach(range => {
-    const valSpan = document.getElementById(range.id + '-val');
-    if (valSpan) valSpan.textContent = parseFloat(range.value).toFixed(2);
-  });
-}
 
 // Delete (with confirmation)
 let pendingDeleteName = null;
@@ -1201,19 +1912,25 @@ document.getElementById('btn-confirm-no').addEventListener('click', () => {
   document.getElementById('confirm-overlay').classList.remove('active');
 });
 
-// Init preset list on load
+// ===== INIT =====
 refreshPresetList();
-</script>
 
-<div id="confirm-overlay">
-  <div class="confirm-box">
-    <p>Delete this layout?</p>
-    <div class="preset-name" id="confirm-preset-name"></div>
-    <div class="confirm-buttons">
-      <button class="btn-confirm-delete" id="btn-confirm-yes">Delete</button>
-      <button class="btn-cancel" id="btn-confirm-no">Cancel</button>
-    </div>
-  </div>
-</div>
+// Load saved defaults or factory defaults
+let savedDefaults = null;
+try {
+  const stored = localStorage.getItem(DEFAULTS_KEY);
+  if (stored) savedDefaults = JSON.parse(stored);
+} catch (e) {}
+
+if (savedDefaults) {
+  applyConfigToForm(savedDefaults);
+  const iframe = document.getElementById('preview');
+  iframe.addEventListener('load', () => sendConfig(), { once: true });
+} else {
+  DEFAULT_LOGOS.forEach((logo, idx) => createLogoPanel(logo, idx === 0));
+  DEFAULT_TEXTBOXES.forEach(tb => createTextBoxPanel(tb));
+  DEFAULT_BGLOGOS.forEach(bg => createBgLogoPanel(bg));
+}
+</script>
 </body>
 </html>

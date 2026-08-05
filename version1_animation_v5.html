@@ -7,6 +7,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Anton&display=swap" rel="stylesheet">
 <style>
+  @font-face {
+    font-family: 'Bungee';
+    src: url('font/Bungee-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     background: #000;
@@ -26,17 +32,23 @@
 const CONFIG = {
   global: {
     duration: 16000,
-    bpm: 124
+    bpm: 124,
+    bgColor: '#000000',
+    bgImageData: null
   },
-  mainLogo: {
-    yPosition: 0.5,
-    size: 0.82,
-    fadeInTime: 960,
-    fadeOutTime: 800,
-    parallax: true,
-    parallaxStartY: -0.3,
-    parallaxDuration: 3000
-  },
+  logos: [
+    {
+      id: 0,
+      imageData: null,
+      yPosition: 0.5,
+      size: 0.82,
+      fadeInTime: 960,
+      fadeOutTime: 800,
+      parallax: true,
+      parallaxStartY: -0.3,
+      parallaxDuration: 3000
+    }
+  ],
   pulsingLogo: {
     enabled: true,
     yPosition: 0.34,
@@ -44,44 +56,59 @@ const CONFIG = {
     opacity: 0.85,
     maxScale: 2.0
   },
-  djText: {
-    text: "DJ's moss_b & TonyT",
-    yPosition: 0.72,
-    fontSize: 64,
-    fadeInTime: 5000,
-    fontFamily: '"Arial Black", "Helvetica Neue", sans-serif'
-  },
-  textBox: {
-    enabled: true,
-    text: "NEXT EVENT: SAT 9PM",
-    yPosition: 0.88,
-    fontSize: 42,
-    borderWidth: 3,
-    cornerRadius: 12,
-    fadeInTime: 7000,
-    paddingX: 40,
-    paddingY: 20,
-    fontFamily: '"Arial Black", "Helvetica Neue", sans-serif'
-  },
+  textBoxes: [
+    {
+      id: 0,
+      text: "DJ's moss_b & TonyT",
+      yPosition: 0.72,
+      fontSize: 120,
+      fadeInTime: 5000,
+      fontFamily: '"Bungee", "Arial Black", sans-serif',
+      border: false,
+      borderWidth: 3,
+      borderColor: '#E8423F',
+      cornerRadius: 12,
+      paddingX: 40,
+      paddingY: 20,
+      textColor: '#FFFFFF'
+    },
+    {
+      id: 1,
+      text: "NEXT EVENT: SAT 9PM",
+      yPosition: 0.88,
+      fontSize: 80,
+      fadeInTime: 7000,
+      fontFamily: '"Bungee", "Arial Black", sans-serif',
+      border: true,
+      borderWidth: 3,
+      borderColor: '#E8423F',
+      cornerRadius: 12,
+      paddingX: 40,
+      paddingY: 20,
+      textColor: '#FFFFFF'
+    }
+  ],
   spectrum: {
+    enabled: true,
     height: 900,
     bottomOffset: 40,
     barCount: 32
   },
   waveform: {
+    enabled: true,
     yCenter: 0.61,
     height: 1200,
     lineWidth: 6
   },
   bgLogos: [
-    { scale: 2.2, y: 0.10, speed: 0.10, dir: -1, opacity: 0.30 },
-    { scale: 1.4, y: 0.22, speed: 0.16, dir: 1,  opacity: 0.20 },
-    { scale: 0.8, y: 0.30, speed: 0.22, dir: -1, opacity: 0.15 },
-    { scale: 2.5, y: 0.55, speed: 0.07, dir: 1,  opacity: 0.35 },
-    { scale: 1.0, y: 0.65, speed: 0.19, dir: -1, opacity: 0.18 },
-    { scale: 1.8, y: 0.78, speed: 0.13, dir: 1,  opacity: 0.28 },
-    { scale: 0.6, y: 0.88, speed: 0.25, dir: -1, opacity: 0.12 },
-    { scale: 3.0, y: 0.45, speed: 0.05, dir: -1, opacity: 0.22 },
+    { scale: 2.2, y: 0.10, speed: 0.10, clockDir: 9, opacity: 0.30, imageData: null },
+    { scale: 1.4, y: 0.22, speed: 0.16, clockDir: 3, opacity: 0.20, imageData: null },
+    { scale: 0.8, y: 0.30, speed: 0.22, clockDir: 9, opacity: 0.15, imageData: null },
+    { scale: 2.5, y: 0.55, speed: 0.07, clockDir: 3, opacity: 0.35, imageData: null },
+    { scale: 1.0, y: 0.65, speed: 0.19, clockDir: 9, opacity: 0.18, imageData: null },
+    { scale: 1.8, y: 0.78, speed: 0.13, clockDir: 3, opacity: 0.28, imageData: null },
+    { scale: 0.6, y: 0.88, speed: 0.25, clockDir: 9, opacity: 0.12, imageData: null },
+    { scale: 3.0, y: 0.45, speed: 0.05, clockDir: 9, opacity: 0.22, imageData: null },
   ],
   effects: {
     glitch: true,
@@ -97,28 +124,46 @@ const CONFIG = {
 window.addEventListener('message', (e) => {
   if (e.data && e.data.type === 'CONFIG_UPDATE') {
     Object.assign(CONFIG.global, e.data.config.global || {});
-    Object.assign(CONFIG.mainLogo, e.data.config.mainLogo || {});
     Object.assign(CONFIG.pulsingLogo, e.data.config.pulsingLogo || {});
-    Object.assign(CONFIG.djText, e.data.config.djText || {});
-    Object.assign(CONFIG.textBox, e.data.config.textBox || {});
     Object.assign(CONFIG.spectrum, e.data.config.spectrum || {});
     Object.assign(CONFIG.waveform, e.data.config.waveform || {});
     Object.assign(CONFIG.effects, e.data.config.effects || {});
+    if (e.data.config.logos) CONFIG.logos = e.data.config.logos;
+    if (e.data.config.textBoxes) CONFIG.textBoxes = e.data.config.textBoxes;
     if (e.data.config.bgLogos) CONFIG.bgLogos = e.data.config.bgLogos;
     startTime = null;
   }
 });
 
-// Respond to config requests from editor
+// Respond to config requests, recording, font/image loading
 window.addEventListener('message', (e) => {
-  if (e.data && e.data.type === 'GET_CONFIG') {
+  if (!e.data) return;
+  if (e.data.type === 'GET_CONFIG') {
     window.parent.postMessage({ type: 'CONFIG_RESPONSE', config: JSON.parse(JSON.stringify(CONFIG)) }, '*');
   }
-  if (e.data && e.data.type === 'START_RECORDING') {
+  if (e.data.type === 'START_RECORDING') {
     startRecording(e.data.loops || 1);
   }
-  if (e.data && e.data.type === 'LOAD_CUSTOM_FONT') {
+  if (e.data.type === 'LOAD_CUSTOM_FONT') {
     loadCustomFont(e.data.name, e.data.dataUrl);
+  }
+  if (e.data.type === 'LOAD_LOGO_IMAGE') {
+    loadLogoImage(e.data.id, e.data.dataUrl);
+  }
+  if (e.data.type === 'LOAD_BG_IMAGE') {
+    loadBgImage(e.data.dataUrl);
+  }
+  if (e.data.type === 'LOAD_BGLOGO_IMAGE') {
+    loadBgLogoImage(e.data.index, e.data.dataUrl);
+  }
+  if (e.data.type === 'LOAD_PULSING_LOGO_IMAGE') {
+    loadPulsingLogoImage(e.data.dataUrl);
+  }
+  if (e.data.type === 'SHOW_LABELS') {
+    showLabels = true;
+  }
+  if (e.data.type === 'HIDE_LABELS') {
+    showLabels = false;
   }
 });
 
@@ -132,12 +177,139 @@ function loadCustomFont(name, dataUrl) {
   });
 }
 
+// Multiple logo images keyed by logo id
+const logoImages = {};
+let defaultLogoLoaded = false;
+
+function loadLogoImage(id, dataUrl) {
+  const img = new Image();
+  img.onload = () => {
+    logoImages[id] = img;
+    window.parent.postMessage({ type: 'LOGO_IMAGE_LOADED', id }, '*');
+  };
+  img.onerror = () => {
+    window.parent.postMessage({ type: 'LOGO_IMAGE_ERROR', id }, '*');
+  };
+  img.src = dataUrl;
+}
+
+// Pulsing logo custom image
+let pulsingLogoImg = null;
+function loadPulsingLogoImage(dataUrl) {
+  if (!dataUrl) { pulsingLogoImg = null; return; }
+  const img = new Image();
+  img.onload = () => { pulsingLogoImg = img; };
+  img.src = dataUrl;
+}
+
+// Background logo images (per-bgLogo custom images)
+const bgLogoImages = {};
+function loadBgLogoImage(index, dataUrl) {
+  if (!dataUrl) { delete bgLogoImages[index]; return; }
+  const img = new Image();
+  img.onload = () => { bgLogoImages[index] = img; };
+  img.src = dataUrl;
+}
+
+// Background image
+let bgImg = null;
+function loadBgImage(dataUrl) {
+  if (!dataUrl) { bgImg = null; return; }
+  const img = new Image();
+  img.onload = () => { bgImg = img; };
+  img.src = dataUrl;
+}
+
+// Clock-face direction vectors: each maps to a unit (dx, dy) for travel direction
+const CLOCK_DIRS = {
+  12: { dx: 0,      dy: -1 },
+  1:  { dx: 0.5,    dy: -0.866 },
+  2:  { dx: 0.866,  dy: -0.5 },
+  3:  { dx: 1,      dy: 0 },
+  4:  { dx: 0.866,  dy: 0.5 },
+  5:  { dx: 0.5,    dy: 0.866 },
+  6:  { dx: 0,      dy: 1 },
+  7:  { dx: -0.5,   dy: 0.866 },
+  8:  { dx: -0.866, dy: 0.5 },
+  9:  { dx: -1,     dy: 0 },
+  10: { dx: -0.866, dy: -0.5 },
+  11: { dx: -0.5,   dy: -0.866 },
+};
+
+function getLayerClockDir(layer) {
+  if (layer.clockDir != null) return layer.clockDir;
+  return layer.dir > 0 ? 3 : 9;
+}
+
+// Default logo embedded as data URL to keep canvas origin-clean (file:// cross-origin fix)
+const DEFAULT_LOGO_DATA = 'data:image/png;base64,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';
+
+const defaultLogoImg = new Image();
+defaultLogoImg.onload = () => {
+  defaultLogoLoaded = true;
+  if (!logoImages[0]) logoImages[0] = defaultLogoImg;
+};
+defaultLogoImg.onerror = () => { console.warn('Failed to load default logo'); };
+defaultLogoImg.src = DEFAULT_LOGO_DATA;
+
+// Load images embedded in CONFIG (for standalone downloaded HTML)
+function initFromConfig() {
+  CONFIG.logos.forEach(logo => {
+    if (logo.imageData) loadLogoImage(logo.id, logo.imageData);
+  });
+  CONFIG.bgLogos.forEach((bg, idx) => {
+    if (bg.imageData) loadBgLogoImage(idx, bg.imageData);
+  });
+  if (CONFIG.global.bgImageData) loadBgImage(CONFIG.global.bgImageData);
+}
+setTimeout(initFromConfig, 100);
+
+function getLogoImage(logoConfig) {
+  if (logoImages[logoConfig.id]) return logoImages[logoConfig.id];
+  return defaultLogoImg;
+}
+
+function isLogoReady(logoConfig) {
+  if (logoImages[logoConfig.id]) return true;
+  return defaultLogoLoaded;
+}
+
+let showLabels = false;
+
+function drawLabel(ctx, text, x, y) {
+  ctx.save();
+  ctx.globalAlpha = 0.9;
+  ctx.font = 'bold 28px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  const pad = 10;
+  const w = ctx.measureText(text).width + pad * 2;
+  const h = 36;
+  ctx.fillStyle = '#E8423F';
+  ctx.beginPath();
+  ctx.roundRect(x, y - h / 2, w, h, 6);
+  ctx.fill();
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillText(text, x + pad, y);
+  ctx.restore();
+}
+
 let isRecording = false;
 let recordingStartTime = null;
 let recordingDuration = 0;
 
 function startRecording(loops) {
-  const stream = canvas.captureStream(30);
+  let stream;
+  try {
+    stream = canvas.captureStream(30);
+  } catch (err) {
+    window.parent.postMessage({
+      type: 'RECORDING_ERROR',
+      error: 'Canvas capture blocked. If using Brave, click the Shields icon in the address bar and disable Shields for this page, then try again. (' + err.message + ')'
+    }, '*');
+    return;
+  }
+
   let mimeType = 'video/webm;codecs=vp9';
   let ext = 'webm';
   const tryTypes = [
@@ -156,29 +328,55 @@ function startRecording(loops) {
     }
   }
 
-  const recorder = new MediaRecorder(stream, {
-    mimeType,
-    videoBitsPerSecond: 12000000
-  });
+  let recorder;
+  try {
+    recorder = new MediaRecorder(stream, {
+      mimeType,
+      videoBitsPerSecond: 12000000
+    });
+  } catch (err) {
+    window.parent.postMessage({
+      type: 'RECORDING_ERROR',
+      error: 'MediaRecorder failed: ' + err.message + '. Try using Chrome or Safari.'
+    }, '*');
+    return;
+  }
 
   const chunks = [];
   recorder.ondataavailable = (ev) => {
     if (ev.data.size > 0) chunks.push(ev.data);
   };
 
+  recorder.onerror = (ev) => {
+    isRecording = false;
+    recordingStartTime = null;
+    window.parent.postMessage({
+      type: 'RECORDING_ERROR',
+      error: 'Recording failed: ' + (ev.error ? ev.error.message : 'unknown error')
+    }, '*');
+  };
+
   recorder.onstop = () => {
     isRecording = false;
     recordingStartTime = null;
     const blob = new Blob(chunks, { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'version1_animation.' + ext;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    window.parent.postMessage({ type: 'RECORDING_COMPLETE', format: ext }, '*');
+    if (blob.size === 0) {
+      window.parent.postMessage({
+        type: 'RECORDING_ERROR',
+        error: 'Recording produced an empty file. Try using Chrome or Safari.'
+      }, '*');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      window.parent.postMessage({
+        type: 'RECORDING_COMPLETE',
+        format: ext,
+        dataUrl: reader.result,
+        filename: 'version1_animation.' + ext
+      }, '*');
+    };
+    reader.readAsDataURL(blob);
   };
 
   startTime = null;
@@ -190,7 +388,7 @@ function startRecording(loops) {
     window.parent.postMessage({ type: 'RECORDING_STARTED', format: ext, duration: recordingDuration }, '*');
 
     setTimeout(() => {
-      recorder.stop();
+      if (recorder.state === 'recording') recorder.stop();
     }, recordingDuration + 200);
   });
 }
@@ -212,20 +410,11 @@ window.addEventListener('resize', resize);
 const RED = '#E8423F';
 const RED_GLOW = '#FF5A57';
 const WHITE = '#FFFFFF';
-const BG = '#000000';
-const GREY_DARK = '#1a1a1a';
-const GREY_MID = '#333333';
 const GREEN = '#00FF88';
 const AMBER = '#FFAA00';
 const CYAN = '#00DDFF';
 
 let startTime = null;
-
-const logoImg = new Image();
-let logoLoaded = false;
-logoImg.onload = () => { logoLoaded = true; };
-logoImg.onerror = () => { console.warn('Logo image not found at logo.png'); };
-logoImg.src = 'logo.png';
 
 // --- SIMULATED AUDIO ENGINE ---
 function getAudioData(time) {
@@ -368,43 +557,47 @@ function drawWaveform(ctx, x, y, w, h, alpha, audio) {
   ctx.restore();
 }
 
-// --- RED-BORDERED TEXT BOX (supports \n for line breaks) ---
-function drawTextBox(ctx, alpha) {
-  if (!CONFIG.textBox.enabled || alpha <= 0) return;
+// --- TEXT BOX (supports \n for line breaks, optional border) ---
+function drawTextBox(ctx, alpha, tb) {
+  if (alpha <= 0) return;
   ctx.save();
   ctx.globalAlpha = alpha;
 
-  const lines = CONFIG.textBox.text.split('\\n');
-  const y = H * CONFIG.textBox.yPosition;
-  const fontSize = CONFIG.textBox.fontSize;
-  const borderW = CONFIG.textBox.borderWidth;
-  const radius = CONFIG.textBox.cornerRadius;
-  const padX = CONFIG.textBox.paddingX;
-  const padY = CONFIG.textBox.paddingY;
+  const lines = tb.text.split('\\n');
+  const y = H * tb.yPosition;
+  const fontSize = tb.fontSize;
   const lineHeight = fontSize * 1.3;
 
-  ctx.font = 'bold ' + fontSize + 'px ' + CONFIG.textBox.fontFamily;
+  ctx.font = 'bold ' + fontSize + 'px ' + tb.fontFamily;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+  ctx.letterSpacing = Math.round(fontSize * 0.06) + 'px';
 
-  let maxWidth = 0;
-  for (const line of lines) {
-    const w = ctx.measureText(line).width;
-    if (w > maxWidth) maxWidth = w;
+  if (tb.border) {
+    const padX = tb.paddingX || 40;
+    const padY = tb.paddingY || 20;
+    const borderW = tb.borderWidth || 3;
+    const radius = tb.cornerRadius || 12;
+
+    let maxWidth = 0;
+    for (const line of lines) {
+      const w = ctx.measureText(line).width;
+      if (w > maxWidth) maxWidth = w;
+    }
+
+    const boxW = maxWidth + padX * 2;
+    const boxH = lineHeight * lines.length + padY * 2 - (lineHeight - fontSize);
+    const boxX = (W - boxW) / 2;
+    const boxY = y - boxH / 2;
+
+    ctx.strokeStyle = tb.borderColor || RED;
+    ctx.lineWidth = borderW;
+    ctx.beginPath();
+    ctx.roundRect(boxX, boxY, boxW, boxH, radius);
+    ctx.stroke();
   }
 
-  const boxW = maxWidth + padX * 2;
-  const boxH = lineHeight * lines.length + padY * 2 - (lineHeight - fontSize);
-  const boxX = (W - boxW) / 2;
-  const boxY = y - boxH / 2;
-
-  ctx.strokeStyle = RED;
-  ctx.lineWidth = borderW;
-  ctx.beginPath();
-  ctx.roundRect(boxX, boxY, boxW, boxH, radius);
-  ctx.stroke();
-
-  ctx.fillStyle = WHITE;
+  ctx.fillStyle = tb.textColor || WHITE;
   const textBlockTop = y - ((lines.length - 1) * lineHeight) / 2;
   for (let i = 0; i < lines.length; i++) {
     ctx.fillText(lines[i], W / 2, textBlockTop + i * lineHeight);
@@ -510,34 +703,42 @@ function render(timestamp) {
   const audio = getAudioData(timestamp - (startTime || 0));
   updateSmoothed(audio);
 
-  // Reset particles near loop boundary for clean restart
   if (t < 0.02) particles = [];
 
-  ctx.fillStyle = BG;
+  // Background colour
+  ctx.fillStyle = CONFIG.global.bgColor || '#000000';
   ctx.fillRect(0, 0, W, H);
 
-  // Parallax: logo scrolls in at start, scrolls out at end for seamless loop
-  let logoY;
-  const pxDur = CONFIG.mainLogo.parallaxDuration;
-  const startYPos = H * CONFIG.mainLogo.parallaxStartY;
-  const endYPos = H * CONFIG.mainLogo.yPosition;
-  if (CONFIG.mainLogo.parallax && elapsed < pxDur) {
-    const pProgress = easeOutCubic(elapsed / pxDur);
-    logoY = startYPos + (endYPos - startYPos) * pProgress;
-  } else if (CONFIG.mainLogo.parallax && elapsed > TOTAL_DURATION - pxDur) {
-    const pProgress = easeOutCubic((TOTAL_DURATION - elapsed) / pxDur);
-    logoY = startYPos + (endYPos - startYPos) * pProgress;
-  } else {
-    logoY = endYPos;
+  // Background image (cover-fit, centred)
+  if (bgImg) {
+    const imgAspect = bgImg.naturalWidth / bgImg.naturalHeight;
+    const canvasAspect = W / H;
+    let drawW, drawH, drawX, drawY;
+    if (imgAspect > canvasAspect) {
+      drawH = H;
+      drawW = H * imgAspect;
+      drawX = (W - drawW) / 2;
+      drawY = 0;
+    } else {
+      drawW = W;
+      drawH = W / imgAspect;
+      drawX = 0;
+      drawY = (H - drawH) / 2;
+    }
+    ctx.drawImage(bgImg, drawX, drawY, drawW, drawH);
   }
 
-  // Master fade envelope: 0 at boundaries, 1 in the middle (seamless loop)
+  // Use first logo for parallax reference
+  const primaryLogo = CONFIG.logos[0] || CONFIG.logos[0];
+  const pxDur = primaryLogo ? primaryLogo.parallaxDuration : 3000;
+
+  // Master fade envelope
   const fadeIn = 0.05, fadeOut = 0.05;
   let masterAlpha = 1;
   if (t < fadeIn) masterAlpha = t / fadeIn;
   else if (t > 1.0 - fadeOut) masterAlpha = (1.0 - t) / fadeOut;
 
-  // Instrument fade-in/out
+  // Instrument fade
   let instrAlpha = 0;
   if (t > 0.04 && t < 0.96) {
     instrAlpha = t < 0.10 ? (t - 0.04) / 0.06 : (t > 0.90 ? (0.96 - t) / 0.06 : 1);
@@ -551,53 +752,90 @@ function render(timestamp) {
     drawGrid(ctx, elapsed, gridI * 0.6 * masterAlpha);
   }
 
-  // --- SCROLLING BACKGROUND LOGOS (fade in/out for seamless loop) ---
+  // --- SCROLLING BACKGROUND LOGOS ---
   let bgFade = 1;
   if (t < 0.05) bgFade = t / 0.05;
   else if (t > 0.93) bgFade = Math.max(0, (1.0 - t) / 0.07);
 
-  if (logoLoaded && bgFade > 0) {
-    const bgAspect = logoImg.naturalWidth / logoImg.naturalHeight;
+  if (bgFade > 0) {
+    for (let li = 0; li < CONFIG.bgLogos.length; li++) {
+      const layer = CONFIG.bgLogos[li];
+      const layerImg = bgLogoImages[li] || (defaultLogoLoaded ? defaultLogoImg : null);
+      if (!layerImg) continue;
 
-    for (const layer of CONFIG.bgLogos) {
+      const bgAspect = layerImg.naturalWidth / layerImg.naturalHeight;
       const lW = W * layer.scale;
       const lH = lW / bgAspect;
-      const scrollLen = lW + W;
+      const scrollLenX = lW + W;
+      const scrollLenY = lH + H;
 
-      // Parallax: bg logos shift vertically at different rates, in AND out
-      let layerY = H * layer.y;
-      if (CONFIG.mainLogo.parallax) {
+      const cd = getLayerClockDir(layer);
+      const dir = CLOCK_DIRS[cd] || CLOCK_DIRS[9];
+      const isVertical = cd === 12 || cd === 6;
+      const isHorizontal = cd === 3 || cd === 9;
+
+      let baseY = isVertical ? H * 0.5 : H * layer.y;
+      let baseX = isVertical ? W * layer.y : W * 0.5;
+
+      if (!isVertical && primaryLogo && primaryLogo.parallax) {
         const parallaxRate = 0.3 + layer.speed * 2;
         const layerShift = H * 0.15 * parallaxRate;
         if (elapsed < pxDur) {
           const pProgress = easeOutCubic(elapsed / pxDur);
-          layerY = (H * layer.y - layerShift) + layerShift * pProgress;
+          baseY = (H * layer.y - layerShift) + layerShift * pProgress;
         } else if (elapsed > TOTAL_DURATION - pxDur) {
           const pProgress = easeOutCubic((TOTAL_DURATION - elapsed) / pxDur);
-          layerY = (H * layer.y - layerShift) + layerShift * pProgress;
+          baseY = (H * layer.y - layerShift) + layerShift * pProgress;
         }
       }
 
-      const px = layer.dir > 0
-        ? -lW + ((elapsed * layer.speed) % scrollLen)
-        : W - ((elapsed * layer.speed) % scrollLen);
-
       ctx.save();
       ctx.globalAlpha = layer.opacity * bgFade;
-      ctx.drawImage(logoImg, px, layerY - lH / 2, lW, lH);
-      ctx.drawImage(logoImg, px + layer.dir * -scrollLen, layerY - lH / 2, lW, lH);
+
+      if (isHorizontal) {
+        const px = dir.dx > 0
+          ? -lW + ((elapsed * layer.speed) % scrollLenX)
+          : W - ((elapsed * layer.speed) % scrollLenX);
+        const py = baseY - lH / 2;
+        ctx.drawImage(layerImg, px, py, lW, lH);
+        ctx.drawImage(layerImg, px - dir.dx * scrollLenX, py, lW, lH);
+      } else if (isVertical) {
+        const px = baseX - lW / 2;
+        const py = dir.dy > 0
+          ? -lH + ((elapsed * layer.speed) % scrollLenY)
+          : H - ((elapsed * layer.speed) % scrollLenY);
+        ctx.drawImage(layerImg, px, py, lW, lH);
+        ctx.drawImage(layerImg, px, py - dir.dy * scrollLenY, lW, lH);
+      } else {
+        const speedX = layer.speed * Math.abs(dir.dx);
+        const speedY = layer.speed * Math.abs(dir.dy);
+        const rawPx = dir.dx > 0
+          ? -lW + ((elapsed * speedX) % scrollLenX)
+          : W - ((elapsed * speedX) % scrollLenX);
+        const rawPy = dir.dy > 0
+          ? -lH + ((elapsed * speedY) % scrollLenY)
+          : H - ((elapsed * speedY) % scrollLenY);
+        const offX = dir.dx > 0 ? -scrollLenX : scrollLenX;
+        const offY = dir.dy > 0 ? -scrollLenY : scrollLenY;
+        ctx.drawImage(layerImg, rawPx, rawPy, lW, lH);
+        ctx.drawImage(layerImg, rawPx + offX, rawPy, lW, lH);
+        ctx.drawImage(layerImg, rawPx, rawPy + offY, lW, lH);
+        ctx.drawImage(layerImg, rawPx + offX, rawPy + offY, lW, lH);
+      }
+
       ctx.restore();
     }
   }
 
-  // Light sweeps
+  // Light sweeps (use first logo Y for reference)
+  const primaryLogoY = primaryLogo ? H * primaryLogo.yPosition : H * 0.5;
   if (CONFIG.effects.sweeps) {
-    if (t > 0.10 && t < 0.20) drawSweep(ctx, (t - 0.10) / 0.10, logoY, 200);
-    if (t > 0.45 && t < 0.55) drawSweep(ctx, (t - 0.45) / 0.10, logoY, 150);
-    if (t > 0.70 && t < 0.78) drawSweep(ctx, (t - 0.70) / 0.08, logoY, 150);
+    if (t > 0.10 && t < 0.20) drawSweep(ctx, (t - 0.10) / 0.10, primaryLogoY, 200);
+    if (t > 0.45 && t < 0.55) drawSweep(ctx, (t - 0.45) / 0.10, primaryLogoY, 150);
+    if (t > 0.70 && t < 0.78) drawSweep(ctx, (t - 0.70) / 0.08, primaryLogoY, 150);
   }
 
-  // Glitch (symmetric: intro burst mirrors outro burst)
+  // Glitch
   if (CONFIG.effects.glitch && masterAlpha > 0.1) {
     let gI = 0;
     if (t > 0.06 && t < 0.12) gI = 0.8 * (1 - (t - 0.06) / 0.06);
@@ -611,8 +849,7 @@ function render(timestamp) {
 
   // Scanlines
   if (CONFIG.effects.scanlines) {
-    let sI = 0.4 * masterAlpha;
-    drawScanlines(ctx, sI);
+    drawScanlines(ctx, 0.4 * masterAlpha);
   }
 
   // Particles
@@ -631,7 +868,7 @@ function render(timestamp) {
     ctx.restore();
   }
 
-  // Vignette (stronger at boundaries to help fade to black)
+  // Vignette
   if (CONFIG.effects.vignette) {
     const vignetteStrength = 0.55 + (1 - masterAlpha) * 0.45;
     const vG = ctx.createRadialGradient(W/2, H/2, H*0.3, W/2, H/2, H*0.8);
@@ -640,53 +877,81 @@ function render(timestamp) {
     ctx.fillStyle = vG; ctx.fillRect(0, 0, W, H);
   }
 
-  // --- MAIN LOGO (symmetric fade in/out, respects master envelope) ---
-  const fadeInNorm = CONFIG.mainLogo.fadeInTime / TOTAL_DURATION;
-  const fadeOutNorm = CONFIG.mainLogo.fadeOutTime / TOTAL_DURATION;
-  const logoFadeOutStart = 1.0 - fadeOutNorm - 0.04;
-  let logoAlpha = 0;
-  if (t >= 0.04 && t < (1.0 - 0.04)) {
-    const rT = Math.min(1, (t - 0.04) / fadeInNorm);
-    logoAlpha = easeOutExpo(rT);
-    if (t > logoFadeOutStart) logoAlpha *= Math.max(0, ((1.0 - 0.04) - t) / fadeOutNorm);
-  }
-  logoAlpha *= masterAlpha;
+  // --- LOGOS (iterate over all, each with own parallax/fade) ---
+  for (let li = 0; li < CONFIG.logos.length; li++) {
+    const logo = CONFIG.logos[li];
+    const logoImg = getLogoImage(logo);
+    const logoReady = isLogoReady(logo);
 
-  const targetW = W * CONFIG.mainLogo.size;
-  const aspect = logoLoaded ? logoImg.naturalWidth / logoImg.naturalHeight : 5;
-  const drawW = targetW;
-  const drawH = drawW / aspect;
-
-  // Kick-synced pulse ghost (fades out with logo for seamless loop)
-  const pulseEndTime = TOTAL_DURATION - pxDur;
-  if (CONFIG.pulsingLogo.enabled && logoAlpha > 0 && logoLoaded
-      && elapsed > CONFIG.pulsingLogo.startTime && elapsed < pulseEndTime) {
-    const beatDuration = 60 / CONFIG.global.bpm;
-    const totalTime = (timestamp - (startTime || 0)) / 1000;
-    const beatPhase = (totalTime / beatDuration) % 1;
-    const pulseScale = 1 + beatPhase * (CONFIG.pulsingLogo.maxScale - 1);
-    let pulseFade = 1;
-    if (elapsed > pulseEndTime - 2000) pulseFade = Math.max(0, (pulseEndTime - elapsed) / 2000);
-    const pulseAlpha = logoAlpha * CONFIG.pulsingLogo.opacity * Math.pow(1 - beatPhase, 1.5) * pulseFade;
-
-    if (pulseAlpha > 0.01) {
-      ctx.save();
-      ctx.translate(W / 2, H * CONFIG.pulsingLogo.yPosition);
-      ctx.scale(pulseScale, pulseScale);
-      ctx.globalAlpha = pulseAlpha;
-      ctx.drawImage(logoImg, -drawW / 2, -drawH / 2, drawW, drawH);
-      ctx.restore();
+    // Parallax position
+    let logoY;
+    const logoPxDur = logo.parallaxDuration || 3000;
+    const logoStartY = H * (logo.parallaxStartY ?? -0.3);
+    const logoEndY = H * logo.yPosition;
+    if (logo.parallax && elapsed < logoPxDur) {
+      const pProgress = easeOutCubic(elapsed / logoPxDur);
+      logoY = logoStartY + (logoEndY - logoStartY) * pProgress;
+    } else if (logo.parallax && elapsed > TOTAL_DURATION - logoPxDur) {
+      const pProgress = easeOutCubic((TOTAL_DURATION - elapsed) / logoPxDur);
+      logoY = logoStartY + (logoEndY - logoStartY) * pProgress;
+    } else {
+      logoY = logoEndY;
     }
-  }
 
-  // --- SPECTRUM ANALYSER ---
-  const specH = CONFIG.spectrum.height;
-  const specX = 30, specW = W - 60;
-  const specY = H - specH - CONFIG.spectrum.bottomOffset;
-  drawSpectrumAnalyser(ctx, specX, specY, specW, specH, instrAlpha * 0.9);
+    // Alpha
+    const fadeInNorm = (logo.fadeInTime || 960) / TOTAL_DURATION;
+    const fadeOutNorm = (logo.fadeOutTime || 800) / TOTAL_DURATION;
+    const logoFadeOutStart = 1.0 - fadeOutNorm - 0.04;
+    let logoAlpha = 0;
+    if (t >= 0.04 && t < (1.0 - 0.04)) {
+      const rT = Math.min(1, (t - 0.04) / fadeInNorm);
+      logoAlpha = easeOutExpo(rT);
+      if (t > logoFadeOutStart) logoAlpha *= Math.max(0, ((1.0 - 0.04) - t) / fadeOutNorm);
+    }
+    logoAlpha *= masterAlpha;
 
-  // Solid logo on top
-  if (logoAlpha > 0 && logoLoaded) {
+    if (!logoReady || logoAlpha <= 0) continue;
+
+    const targetW = W * logo.size;
+    const aspect = logoImg.naturalWidth / logoImg.naturalHeight;
+    const drawW = targetW;
+    const drawH = drawW / aspect;
+
+    // Pulsing ghost (only for first logo)
+    if (li === 0 && CONFIG.pulsingLogo.enabled && logoAlpha > 0
+        && elapsed > CONFIG.pulsingLogo.startTime && elapsed < TOTAL_DURATION - logoPxDur) {
+      const pulseEndTime = TOTAL_DURATION - logoPxDur;
+      const beatDuration = 60 / CONFIG.global.bpm;
+      const totalTime = (timestamp - (startTime || 0)) / 1000;
+      const beatPhase = (totalTime / beatDuration) % 1;
+      const pulseScale = 1 + beatPhase * (CONFIG.pulsingLogo.maxScale - 1);
+      let pulseFade = 1;
+      if (elapsed > pulseEndTime - 2000) pulseFade = Math.max(0, (pulseEndTime - elapsed) / 2000);
+      const pulseAlpha = logoAlpha * CONFIG.pulsingLogo.opacity * Math.pow(1 - beatPhase, 1.5) * pulseFade;
+
+      if (pulseAlpha > 0.01) {
+        const pulseImg = pulsingLogoImg || logoImg;
+        const pulseAspect = pulseImg.naturalWidth / pulseImg.naturalHeight;
+        const pDrawW = pulsingLogoImg ? targetW : drawW;
+        const pDrawH = pulsingLogoImg ? pDrawW / pulseAspect : drawH;
+        ctx.save();
+        ctx.translate(W / 2, H * CONFIG.pulsingLogo.yPosition);
+        ctx.scale(pulseScale, pulseScale);
+        ctx.globalAlpha = pulseAlpha;
+        ctx.drawImage(pulseImg, -pDrawW / 2, -pDrawH / 2, pDrawW, pDrawH);
+        ctx.restore();
+      }
+    }
+
+    // Spectrum (drawn before first logo only)
+    if (li === 0 && CONFIG.spectrum.enabled !== false) {
+      const specH = CONFIG.spectrum.height;
+      const specX = 30, specW = W - 60;
+      const specY = H - specH - CONFIG.spectrum.bottomOffset;
+      drawSpectrumAnalyser(ctx, specX, specY, specW, specH, instrAlpha * 0.9);
+    }
+
+    // Solid logo
     ctx.save();
     ctx.translate(W / 2, logoY);
     ctx.globalAlpha = logoAlpha;
@@ -694,39 +959,121 @@ function render(timestamp) {
     ctx.restore();
   }
 
-  // --- DJ NAMES (fade in + fade out before loop) ---
-  const djFadeStart = CONFIG.djText.fadeInTime / TOTAL_DURATION;
-  const djFadeDur = 1500 / TOTAL_DURATION;
-  const djFadeOutStart = 1.0 - djFadeDur - 0.04;
-  if (elapsed >= CONFIG.djText.fadeInTime) {
-    let djAlpha = Math.min(1, (t - djFadeStart) / djFadeDur);
-    if (t > djFadeOutStart) djAlpha *= Math.max(0, ((1.0 - 0.04) - t) / djFadeDur);
-
-    ctx.save();
-    ctx.globalAlpha = djAlpha;
-    ctx.fillStyle = WHITE;
-    ctx.font = 'bold ' + CONFIG.djText.fontSize + 'px ' + CONFIG.djText.fontFamily;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.letterSpacing = '4px';
-    ctx.fillText(CONFIG.djText.text, W / 2, H * CONFIG.djText.yPosition);
-    ctx.restore();
+  // If no logos exist, still draw spectrum
+  if (CONFIG.logos.length === 0 && CONFIG.spectrum.enabled !== false) {
+    const specH = CONFIG.spectrum.height;
+    const specX = 30, specW = W - 60;
+    const specY = H - specH - CONFIG.spectrum.bottomOffset;
+    drawSpectrumAnalyser(ctx, specX, specY, specW, specH, instrAlpha * 0.9);
   }
 
-  // --- TEXT BOX (fade in + fade out before loop) ---
-  if (CONFIG.textBox.enabled && elapsed >= CONFIG.textBox.fadeInTime) {
-    const tbFadeStart = CONFIG.textBox.fadeInTime / TOTAL_DURATION;
-    const tbFadeDur = 1500 / TOTAL_DURATION;
-    const tbFadeOutStart = 1.0 - tbFadeDur - 0.04;
-    let tbAlpha = Math.min(1, (t - tbFadeStart) / tbFadeDur);
-    if (t > tbFadeOutStart) tbAlpha *= Math.max(0, ((1.0 - 0.04) - t) / tbFadeDur);
-    drawTextBox(ctx, tbAlpha);
+  // --- TEXT BOXES (unified loop) ---
+  for (const tb of CONFIG.textBoxes) {
+    if (elapsed >= tb.fadeInTime) {
+      const tbFadeStart = tb.fadeInTime / TOTAL_DURATION;
+      const tbFadeDur = 1500 / TOTAL_DURATION;
+      const tbFadeOutStart = 1.0 - tbFadeDur - 0.04;
+      let tbAlpha = Math.min(1, (t - tbFadeStart) / tbFadeDur);
+      if (t > tbFadeOutStart) tbAlpha *= Math.max(0, ((1.0 - 0.04) - t) / tbFadeDur);
+      drawTextBox(ctx, tbAlpha, tb);
+    }
   }
 
   // --- WAVEFORM (top layer) ---
-  const waveH = CONFIG.waveform.height;
-  const waveX = 30, waveY = H * CONFIG.waveform.yCenter - waveH / 2, waveW = W - 60;
-  drawWaveform(ctx, waveX, waveY, waveW, waveH, instrAlpha * 0.85, audio);
+  if (CONFIG.waveform.enabled !== false) {
+    const waveH = CONFIG.waveform.height;
+    const waveX = 30, waveY = H * CONFIG.waveform.yCenter - waveH / 2, waveW = W - 60;
+    drawWaveform(ctx, waveX, waveY, waveW, waveH, instrAlpha * 0.85, audio);
+  }
+
+  // --- ELEMENT LABELS (debug overlay) ---
+  if (showLabels) {
+    const pxDurL = primaryLogo ? (primaryLogo.parallaxDuration || 3000) : 3000;
+
+    for (let i = 0; i < CONFIG.bgLogos.length; i++) {
+      const layer = CONFIG.bgLogos[i];
+      const cd = getLayerClockDir(layer);
+      const dir = CLOCK_DIRS[cd] || CLOCK_DIRS[9];
+      const isVertical = cd === 12 || cd === 6;
+      const isHorizontal = cd === 3 || cd === 9;
+
+      const layerImg = bgLogoImages[i] || defaultLogoImg;
+      const bgAspect = layerImg.naturalWidth / layerImg.naturalHeight;
+      const lW = W * layer.scale;
+      const lH = lW / bgAspect;
+      const scrollLenX = lW + W;
+      const scrollLenY = lH + H;
+
+      let lx, ly;
+      if (isHorizontal) {
+        ly = H * layer.y;
+        if (primaryLogo && primaryLogo.parallax) {
+          const parallaxRate = 0.3 + layer.speed * 2;
+          const layerShift = H * 0.15 * parallaxRate;
+          if (elapsed < pxDurL) {
+            ly = (H * layer.y - layerShift) + layerShift * easeOutCubic(elapsed / pxDurL);
+          } else if (elapsed > TOTAL_DURATION - pxDurL) {
+            ly = (H * layer.y - layerShift) + layerShift * easeOutCubic((TOTAL_DURATION - elapsed) / pxDurL);
+          }
+        }
+        lx = dir.dx > 0
+          ? -lW + ((elapsed * layer.speed) % scrollLenX)
+          : W - ((elapsed * layer.speed) % scrollLenX);
+      } else if (isVertical) {
+        lx = W * layer.y - lW / 2;
+        ly = dir.dy > 0
+          ? -lH + ((elapsed * layer.speed) % scrollLenY)
+          : H - ((elapsed * layer.speed) % scrollLenY);
+      } else {
+        const speedX = layer.speed * Math.abs(dir.dx);
+        const speedY = layer.speed * Math.abs(dir.dy);
+        lx = dir.dx > 0
+          ? -lW + ((elapsed * speedX) % scrollLenX)
+          : W - ((elapsed * speedX) % scrollLenX);
+        ly = H * layer.y;
+        if (primaryLogo && primaryLogo.parallax) {
+          const parallaxRate = 0.3 + layer.speed * 2;
+          const layerShift = H * 0.15 * parallaxRate;
+          if (elapsed < pxDurL) {
+            ly = (H * layer.y - layerShift) + layerShift * easeOutCubic(elapsed / pxDurL);
+          } else if (elapsed > TOTAL_DURATION - pxDurL) {
+            ly = (H * layer.y - layerShift) + layerShift * easeOutCubic((TOTAL_DURATION - elapsed) / pxDurL);
+          }
+        }
+      }
+      drawLabel(ctx, 'BG ' + (i + 1), Math.max(4, lx), ly);
+    }
+
+    for (let i = 0; i < CONFIG.logos.length; i++) {
+      const logo = CONFIG.logos[i];
+      const logoPxDur = logo.parallaxDuration || 3000;
+      const logoStartY = H * (logo.parallaxStartY ?? -0.3);
+      const logoEndY = H * logo.yPosition;
+      let ly;
+      if (logo.parallax && elapsed < logoPxDur) {
+        ly = logoStartY + (logoEndY - logoStartY) * easeOutCubic(elapsed / logoPxDur);
+      } else if (logo.parallax && elapsed > TOTAL_DURATION - logoPxDur) {
+        ly = logoStartY + (logoEndY - logoStartY) * easeOutCubic((TOTAL_DURATION - elapsed) / logoPxDur);
+      } else {
+        ly = logoEndY;
+      }
+      drawLabel(ctx, 'Logo ' + (i + 1), 20, ly);
+    }
+
+    for (let i = 0; i < CONFIG.textBoxes.length; i++) {
+      drawLabel(ctx, 'Text ' + (i + 1), 20, H * CONFIG.textBoxes[i].yPosition);
+    }
+
+    if (CONFIG.spectrum.enabled !== false) {
+      drawLabel(ctx, 'Spectrum', 20, H - CONFIG.spectrum.height / 2 - CONFIG.spectrum.bottomOffset);
+    }
+    if (CONFIG.waveform.enabled !== false) {
+      drawLabel(ctx, 'Waveform', 20, H * CONFIG.waveform.yCenter);
+    }
+    if (CONFIG.pulsingLogo.enabled) {
+      drawLabel(ctx, 'Pulsing', W - 180, H * CONFIG.pulsingLogo.yPosition);
+    }
+  }
 
   // Recording progress
   if (isRecording && startTime) {
