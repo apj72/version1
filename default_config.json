@@ -97,5 +97,27 @@
     "cornerRadius": 0,
     "inset": 40,
     "outerBlur": 0
+  },
+  "layerOrder": [
+    "grid", "bgLogos", "videoSlice", "sweeps", "glitch",
+    "scanlines", "particles", "vignette", "cornerAccents",
+    "spectrum", "logos", "textBoxes", "waveform"
+  ],
+  "videoSlice": {
+    "enabled": false,
+    "orientation": "horizontal",
+    "thickness": 200,
+    "position": 0.5,
+    "videoPan": 0.5,
+    "opacity": 1.0,
+    "fadeInTime": 2000,
+    "fadeOutTime": 14000,
+    "fadeDuration": 1000,
+    "slideIn": "none",
+    "slideOut": "none",
+    "slideInTime": 2000,
+    "slideInDuration": 1000,
+    "slideOutTime": 14000,
+    "slideOutDuration": 1000
   }
 }

@@ -125,6 +125,24 @@ const CONFIG = {
     cornerRadius: 0,
     inset: 40,
     outerBlur: 0
+  },
+  layerOrder: null,
+  videoSlice: {
+    enabled: false,
+    orientation: 'horizontal',
+    thickness: 200,
+    position: 0.5,
+    videoPan: 0.5,
+    opacity: 1.0,
+    fadeInTime: 2000,
+    fadeOutTime: 14000,
+    fadeDuration: 1000,
+    slideIn: 'none',
+    slideOut: 'none',
+    slideInTime: 2000,
+    slideInDuration: 1000,
+    slideOutTime: 14000,
+    slideOutDuration: 1000
   }
 };
 
@@ -137,9 +155,11 @@ window.addEventListener('message', (e) => {
     Object.assign(CONFIG.waveform, e.data.config.waveform || {});
     Object.assign(CONFIG.effects, e.data.config.effects || {});
     Object.assign(CONFIG.border, e.data.config.border || {});
+    if (e.data.config.videoSlice) Object.assign(CONFIG.videoSlice, e.data.config.videoSlice);
     if (e.data.config.logos) CONFIG.logos = e.data.config.logos;
     if (e.data.config.textBoxes) CONFIG.textBoxes = e.data.config.textBoxes;
     if (e.data.config.bgLogos) CONFIG.bgLogos = e.data.config.bgLogos;
+    if (e.data.config.layerOrder) CONFIG.layerOrder = e.data.config.layerOrder;
     startTime = null;
   }
 });
@@ -167,6 +187,9 @@ window.addEventListener('message', (e) => {
   }
   if (e.data.type === 'LOAD_PULSING_LOGO_IMAGE') {
     loadPulsingLogoImage(e.data.dataUrl);
+  }
+  if (e.data.type === 'LOAD_SLICE_VIDEO') {
+    loadSliceVideo(e.data.dataUrl);
   }
   if (e.data.type === 'CAPTURE_IMAGE') {
     const dataUrl = canvas.toDataURL('image/png');
@@ -231,6 +254,18 @@ function loadBgImage(dataUrl) {
   const img = new Image();
   img.onload = () => { bgImg = img; };
   img.src = dataUrl;
+}
+
+let sliceVideo = null;
+function loadSliceVideo(dataUrl) {
+  if (!dataUrl) { sliceVideo = null; return; }
+  const vid = document.createElement('video');
+  vid.muted = true;
+  vid.loop = true;
+  vid.playsInline = true;
+  vid.src = dataUrl;
+  vid.play().catch(() => {});
+  sliceVideo = vid;
 }
 
 // Clock-face direction vectors: each maps to a unit (dx, dy) for travel direction
@@ -372,6 +407,10 @@ function startRecording(loops) {
   recorder.onstop = () => {
     isRecording = false;
     recordingStartTime = null;
+    if (sliceVideo) {
+      sliceVideo.loop = true;
+      sliceVideo.play().catch(() => {});
+    }
     const blob = new Blob(chunks, { type: mimeType });
     if (blob.size === 0) {
       window.parent.postMessage({
@@ -395,6 +434,12 @@ function startRecording(loops) {
   startTime = null;
   recordingDuration = CONFIG.global.duration * loops;
   isRecording = true;
+
+  if (sliceVideo) {
+    sliceVideo.loop = false;
+    sliceVideo.currentTime = 0;
+    sliceVideo.play().catch(() => {});
+  }
 
   requestAnimationFrame(() => {
     recorder.start(1000);
@@ -710,9 +755,9 @@ function drawSweep(ctx, progress, y, height) {
   const sx = -200 + (W + 400) * progress;
   const grad = ctx.createLinearGradient(sx-200, 0, sx+200, 0);
   grad.addColorStop(0, 'rgba(255,255,255,0)');
-  grad.addColorStop(0.4, 'rgba(255,255,255,0.08)');
-  grad.addColorStop(0.5, 'rgba(255,255,255,0.2)');
-  grad.addColorStop(0.6, 'rgba(255,255,255,0.08)');
+  grad.addColorStop(0.4, 'rgba(255,255,255,0.15)');
+  grad.addColorStop(0.5, 'rgba(255,255,255,0.4)');
+  grad.addColorStop(0.6, 'rgba(255,255,255,0.15)');
   grad.addColorStop(1, 'rgba(255,255,255,0)');
   ctx.fillStyle = grad;
   ctx.fillRect(0, y-height/2, W, height);
@@ -721,6 +766,88 @@ function drawSweep(ctx, progress, y, height) {
 function easeOutExpo(t) { return t === 1 ? 1 : 1 - Math.pow(2, -10*t); }
 function easeOutBack(t) { const c = 1.7; return 1 + (c+1)*Math.pow(t-1,3) + c*Math.pow(t-1,2); }
 function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+function drawVideoSlice(ctx, elapsed, masterAlpha) {
+  const vs = CONFIG.videoSlice;
+  if (!vs || !vs.enabled || !sliceVideo || sliceVideo.readyState < 2) return;
+
+  let alpha = 0;
+  const fadeIn = vs.fadeInTime;
+  const fadeOut = vs.fadeOutTime;
+  const fadeDur = vs.fadeDuration || 1000;
+
+  if (elapsed >= fadeIn && elapsed < fadeIn + fadeDur) {
+    alpha = (elapsed - fadeIn) / fadeDur;
+  } else if (elapsed >= fadeIn + fadeDur && elapsed <= fadeOut) {
+    alpha = 1;
+  } else if (elapsed > fadeOut && elapsed < fadeOut + fadeDur) {
+    alpha = 1 - (elapsed - fadeOut) / fadeDur;
+  }
+  alpha *= (vs.opacity != null ? vs.opacity : 1) * masterAlpha;
+  if (alpha <= 0) return;
+
+  let offsetX = 0, offsetY = 0;
+
+  if (vs.slideIn !== 'none') {
+    if (elapsed < vs.slideInTime) return;
+    if (elapsed < vs.slideInTime + vs.slideInDuration) {
+      const p = 1 - easeOutCubic((elapsed - vs.slideInTime) / vs.slideInDuration);
+      if (vs.slideIn === 'top')    offsetY = -H * p;
+      if (vs.slideIn === 'bottom') offsetY = H * p;
+      if (vs.slideIn === 'left')   offsetX = -W * p;
+      if (vs.slideIn === 'right')  offsetX = W * p;
+    }
+  }
+
+  if (vs.slideOut !== 'none') {
+    if (elapsed >= vs.slideOutTime + vs.slideOutDuration) return;
+    if (elapsed >= vs.slideOutTime) {
+      const p = easeOutCubic((elapsed - vs.slideOutTime) / vs.slideOutDuration);
+      if (vs.slideOut === 'top')    offsetY = -H * p;
+      if (vs.slideOut === 'bottom') offsetY = H * p;
+      if (vs.slideOut === 'left')   offsetX = -W * p;
+      if (vs.slideOut === 'right')  offsetX = W * p;
+    }
+  }
+
+  const vw = sliceVideo.videoWidth;
+  const vh = sliceVideo.videoHeight;
+  if (!vw || !vh) return;
+
+  const isHoriz = vs.orientation === 'horizontal';
+  const thickness = vs.thickness || 200;
+  const position = vs.position != null ? vs.position : 0.5;
+  const pan = vs.videoPan != null ? vs.videoPan : 0.5;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  if (isHoriz) {
+    const destY = position * H - thickness / 2 + offsetY;
+    const destX = offsetX;
+    ctx.beginPath();
+    ctx.rect(0, position * H - thickness / 2, W, thickness);
+    ctx.clip();
+    const scale = W / vw;
+    const scaledH = vh * scale;
+    const maxPanOffset = scaledH - thickness;
+    const panOffset = maxPanOffset > 0 ? pan * maxPanOffset : 0;
+    ctx.drawImage(sliceVideo, 0, 0, vw, vh, destX, destY - panOffset, W, scaledH);
+  } else {
+    const destX = position * W - thickness / 2 + offsetX;
+    const destY = offsetY;
+    ctx.beginPath();
+    ctx.rect(position * W - thickness / 2, 0, thickness, H);
+    ctx.clip();
+    const scale = H / vh;
+    const scaledW = vw * scale;
+    const maxPanOffset = scaledW - thickness;
+    const panOffset = maxPanOffset > 0 ? pan * maxPanOffset : 0;
+    ctx.drawImage(sliceVideo, 0, 0, vw, vh, destX - panOffset, destY, scaledW, H);
+  }
+
+  ctx.restore();
+}
 
 function drawBorder(ctx, canvas) {
   const b = CONFIG.border;
@@ -747,71 +874,35 @@ function drawBorder(ctx, canvas) {
   ctx.stroke();
 }
 
-// --- MAIN RENDER ---
-function render(timestamp) {
-  if (!startTime) startTime = timestamp;
-  const TOTAL_DURATION = CONFIG.global.duration;
-  const elapsed = (timestamp - startTime) % TOTAL_DURATION;
-  const t = elapsed / TOTAL_DURATION;
+// --- DEFAULT LAYER ORDER ---
+const DEFAULT_LAYER_ORDER = [
+  'grid', 'bgLogos', 'videoSlice', 'sweeps', 'glitch',
+  'scanlines', 'particles', 'vignette', 'cornerAccents',
+  'spectrum', 'logos', 'textBoxes', 'waveform'
+];
 
-  const audio = getAudioData(timestamp - (startTime || 0));
-  updateSmoothed(audio);
+const LAYER_DISPLAY_NAMES = {
+  grid: 'Grid', bgLogos: 'BG Logos', videoSlice: 'Video Slice',
+  sweeps: 'Sweeps', glitch: 'Glitch', scanlines: 'Scanlines',
+  particles: 'Particles', vignette: 'Vignette', cornerAccents: 'Corner Accents',
+  spectrum: 'Spectrum', logos: 'Logos', textBoxes: 'Text Boxes', waveform: 'Waveform'
+};
 
-  if (t < 0.02) particles = [];
-
-  // Background colour
-  ctx.fillStyle = CONFIG.global.bgColor || '#000000';
-  ctx.fillRect(0, 0, W, H);
-
-  // Background image (cover-fit, centred)
-  if (bgImg) {
-    const imgAspect = bgImg.naturalWidth / bgImg.naturalHeight;
-    const canvasAspect = W / H;
-    let drawW, drawH, drawX, drawY;
-    if (imgAspect > canvasAspect) {
-      drawH = H;
-      drawW = H * imgAspect;
-      drawX = (W - drawW) / 2;
-      drawY = 0;
-    } else {
-      drawW = W;
-      drawH = W / imgAspect;
-      drawX = 0;
-      drawY = (H - drawH) / 2;
-    }
-    ctx.drawImage(bgImg, drawX, drawY, drawW, drawH);
-  }
-
-  // Use first logo for parallax reference
-  const primaryLogo = CONFIG.logos[0] || CONFIG.logos[0];
-  const pxDur = primaryLogo ? primaryLogo.parallaxDuration : 3000;
-
-  // Master fade envelope
-  const fadeIn = 0.05, fadeOut = 0.05;
-  let masterAlpha = 1;
-  if (t < fadeIn) masterAlpha = t / fadeIn;
-  else if (t > 1.0 - fadeOut) masterAlpha = (1.0 - t) / fadeOut;
-
-  // Instrument fade
-  let instrAlpha = 0;
-  if (t > 0.04 && t < 0.96) {
-    instrAlpha = t < 0.10 ? (t - 0.04) / 0.06 : (t > 0.90 ? (0.96 - t) / 0.06 : 1);
-  }
-  instrAlpha *= masterAlpha;
-
-  // Grid
-  if (CONFIG.effects.grid) {
+// --- LAYER RENDERERS ---
+const LAYER_RENDERERS = {
+  grid: function(s) {
+    if (!CONFIG.effects.grid) return;
     let gridI = 0;
-    if (t > 0.01 && t < 0.95) gridI = t < 0.06 ? (t-0.01)/0.05 : (t > 0.88 ? (0.95-t)/0.07 : 1);
-    drawGrid(ctx, elapsed, gridI * 0.6 * masterAlpha);
-  }
+    if (s.t > 0.01 && s.t < 0.95) gridI = s.t < 0.06 ? (s.t-0.01)/0.05 : (s.t > 0.88 ? (0.95-s.t)/0.07 : 1);
+    drawGrid(ctx, s.elapsed, gridI * 0.6 * s.masterAlpha);
+  },
 
-  // --- SCROLLING BACKGROUND LOGOS ---
-  let bgFade = 1;
-  if (t < 0.05) bgFade = t / 0.05;
-  else if (t > 0.93) bgFade = Math.max(0, (1.0 - t) / 0.07);
+  bgLogos: function(s) {
+    let bgFade = 1;
+    if (s.t < 0.05) bgFade = s.t / 0.05;
+    else if (s.t > 0.93) bgFade = Math.max(0, (1.0 - s.t) / 0.07);
+    if (bgFade <= 0) return;
 
-  if (bgFade > 0) {
     for (let li = 0; li < CONFIG.bgLogos.length; li++) {
       const layer = CONFIG.bgLogos[li];
       const layerImg = bgLogoImages[li] || (defaultLogoLoaded ? defaultLogoImg : null);
@@ -831,14 +922,14 @@ function render(timestamp) {
       let baseY = isVertical ? H * 0.5 : H * layer.y;
       let baseX = isVertical ? W * layer.y : W * 0.5;
 
-      if (!isVertical && primaryLogo && primaryLogo.parallax) {
+      if (!isVertical && s.primaryLogo && s.primaryLogo.parallax) {
         const parallaxRate = 0.3 + layer.speed * 2;
         const layerShift = H * 0.15 * parallaxRate;
-        if (elapsed < pxDur) {
-          const pProgress = easeOutCubic(elapsed / pxDur);
+        if (s.elapsed < s.pxDur) {
+          const pProgress = easeOutCubic(s.elapsed / s.pxDur);
           baseY = (H * layer.y - layerShift) + layerShift * pProgress;
-        } else if (elapsed > TOTAL_DURATION - pxDur) {
-          const pProgress = easeOutCubic((TOTAL_DURATION - elapsed) / pxDur);
+        } else if (s.elapsed > s.TOTAL_DURATION - s.pxDur) {
+          const pProgress = easeOutCubic((s.TOTAL_DURATION - s.elapsed) / s.pxDur);
           baseY = (H * layer.y - layerShift) + layerShift * pProgress;
         }
       }
@@ -848,27 +939,27 @@ function render(timestamp) {
 
       if (isHorizontal) {
         const px = dir.dx > 0
-          ? -lW + ((elapsed * layer.speed) % scrollLenX)
-          : W - ((elapsed * layer.speed) % scrollLenX);
+          ? -lW + ((s.elapsed * layer.speed) % scrollLenX)
+          : W - ((s.elapsed * layer.speed) % scrollLenX);
         const py = baseY - lH / 2;
         ctx.drawImage(layerImg, px, py, lW, lH);
         ctx.drawImage(layerImg, px - dir.dx * scrollLenX, py, lW, lH);
       } else if (isVertical) {
         const px = baseX - lW / 2;
         const py = dir.dy > 0
-          ? -lH + ((elapsed * layer.speed) % scrollLenY)
-          : H - ((elapsed * layer.speed) % scrollLenY);
+          ? -lH + ((s.elapsed * layer.speed) % scrollLenY)
+          : H - ((s.elapsed * layer.speed) % scrollLenY);
         ctx.drawImage(layerImg, px, py, lW, lH);
         ctx.drawImage(layerImg, px, py - dir.dy * scrollLenY, lW, lH);
       } else {
         const speedX = layer.speed * Math.abs(dir.dx);
         const speedY = layer.speed * Math.abs(dir.dy);
         const rawPx = dir.dx > 0
-          ? -lW + ((elapsed * speedX) % scrollLenX)
-          : W - ((elapsed * speedX) % scrollLenX);
+          ? -lW + ((s.elapsed * speedX) % scrollLenX)
+          : W - ((s.elapsed * speedX) % scrollLenX);
         const rawPy = dir.dy > 0
-          ? -lH + ((elapsed * speedY) % scrollLenY)
-          : H - ((elapsed * speedY) % scrollLenY);
+          ? -lH + ((s.elapsed * speedY) % scrollLenY)
+          : H - ((s.elapsed * speedY) % scrollLenY);
         const offX = dir.dx > 0 ? -scrollLenX : scrollLenX;
         const offY = dir.dy > 0 ? -scrollLenY : scrollLenY;
         ctx.drawImage(layerImg, rawPx, rawPy, lW, lH);
@@ -879,168 +970,214 @@ function render(timestamp) {
 
       ctx.restore();
     }
-  }
+  },
 
-  // Light sweeps (use first logo Y for reference)
-  const primaryLogoY = primaryLogo ? H * primaryLogo.yPosition : H * 0.5;
-  if (CONFIG.effects.sweeps) {
-    if (t > 0.10 && t < 0.20) drawSweep(ctx, (t - 0.10) / 0.10, primaryLogoY, 200);
-    if (t > 0.45 && t < 0.55) drawSweep(ctx, (t - 0.45) / 0.10, primaryLogoY, 150);
-    if (t > 0.70 && t < 0.78) drawSweep(ctx, (t - 0.70) / 0.08, primaryLogoY, 150);
-  }
+  videoSlice: function(s) {
+    drawVideoSlice(ctx, s.elapsed, s.masterAlpha);
+  },
 
-  // Glitch
-  if (CONFIG.effects.glitch && masterAlpha > 0.1) {
+  sweeps: function(s) {
+    if (!CONFIG.effects.sweeps) return;
+    const primaryLogoY = s.primaryLogo ? H * s.primaryLogo.yPosition : H * 0.5;
+    if (s.t > 0.10 && s.t < 0.20) drawSweep(ctx, (s.t - 0.10) / 0.10, primaryLogoY, 200);
+    if (s.t > 0.45 && s.t < 0.55) drawSweep(ctx, (s.t - 0.45) / 0.10, primaryLogoY, 150);
+    if (s.t > 0.70 && s.t < 0.78) drawSweep(ctx, (s.t - 0.70) / 0.08, primaryLogoY, 150);
+  },
+
+  glitch: function(s) {
+    if (!CONFIG.effects.glitch || s.masterAlpha <= 0.1) return;
     let gI = 0;
-    if (t > 0.06 && t < 0.12) gI = 0.8 * (1 - (t - 0.06) / 0.06);
-    if (t > 0.15 && t < 0.20) gI = Math.max(gI, 0.7 * (1 - (t - 0.15) / 0.05));
-    if (t > 0.25 && t < 0.85 && Math.sin(elapsed * 0.017) > 0.97) gI = 0.3;
-    if (t > 0.88 && t < 0.94) gI = Math.max(gI, 0.8 * ((t - 0.88) / 0.06));
-    gI *= masterAlpha;
+    if (s.t > 0.06 && s.t < 0.12) gI = 0.8 * (1 - (s.t - 0.06) / 0.06);
+    if (s.t > 0.15 && s.t < 0.20) gI = Math.max(gI, 0.7 * (1 - (s.t - 0.15) / 0.05));
+    if (s.t > 0.25 && s.t < 0.85 && Math.sin(s.elapsed * 0.017) > 0.97) gI = 0.3;
+    if (s.t > 0.88 && s.t < 0.94) gI = Math.max(gI, 0.8 * ((s.t - 0.88) / 0.06));
+    gI *= s.masterAlpha;
     if (gI > 0.1) { glitchSlice(ctx, gI); rgbSplit(ctx, gI * 0.8); }
     if (gI > 0.3) noiseRect(ctx, gI * 0.6);
-  }
+  },
 
-  // Scanlines
-  if (CONFIG.effects.scanlines) {
-    drawScanlines(ctx, 0.4 * masterAlpha);
-  }
+  scanlines: function(s) {
+    if (!CONFIG.effects.scanlines) return;
+    drawScanlines(ctx, 0.4 * s.masterAlpha);
+  },
 
-  // Particles
-  particles = particles.filter(p => p.life > 0);
-  particles.forEach(p => { p.update(); p.draw(ctx); });
+  particles: function(s) {
+    particles = particles.filter(p => p.life > 0);
+    particles.forEach(p => { p.update(); p.draw(ctx); });
+  },
 
-  // Corner accents
-  if (CONFIG.effects.cornerAccents && t > 0.08 && t < 0.94) {
-    const cA = (t < 0.14 ? (t - 0.08) / 0.06 : (t > 0.88 ? (0.94 - t) / 0.06 : 1)) * masterAlpha;
-    ctx.save(); ctx.globalAlpha = cA * 0.3; ctx.strokeStyle = RED; ctx.lineWidth = 2;
+  cornerAccents: function(s) {
+    if (!CONFIG.effects.cornerAccents || s.t <= 0.08 || s.t >= 0.94) return;
+    const cA = (s.t < 0.14 ? (s.t - 0.08) / 0.06 : (s.t > 0.88 ? (0.94 - s.t) / 0.06 : 1)) * s.masterAlpha;
+    ctx.save(); ctx.globalAlpha = cA * 0.6; ctx.strokeStyle = RED; ctx.lineWidth = 3;
     const m = 40, l = 60;
     ctx.beginPath(); ctx.moveTo(m, m+l); ctx.lineTo(m, m); ctx.lineTo(m+l, m); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(W-m-l, m); ctx.lineTo(W-m, m); ctx.lineTo(W-m, m+l); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(m, H-m-l); ctx.lineTo(m, H-m); ctx.lineTo(m+l, H-m); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(W-m-l, H-m); ctx.lineTo(W-m, H-m); ctx.lineTo(W-m, H-m-l); ctx.stroke();
     ctx.restore();
-  }
+  },
 
-  // Vignette
-  if (CONFIG.effects.vignette) {
-    const vignetteStrength = 0.55 + (1 - masterAlpha) * 0.45;
+  vignette: function(s) {
+    if (!CONFIG.effects.vignette) return;
+    const vignetteStrength = 0.55 + (1 - s.masterAlpha) * 0.45;
     const vG = ctx.createRadialGradient(W/2, H/2, H*0.3, W/2, H/2, H*0.8);
     vG.addColorStop(0, 'rgba(0,0,0,0)');
     vG.addColorStop(1, 'rgba(0,0,0,' + vignetteStrength + ')');
     ctx.fillStyle = vG; ctx.fillRect(0, 0, W, H);
-  }
+  },
 
-  // --- LOGOS (iterate over all, each with own parallax/fade) ---
-  for (let li = 0; li < CONFIG.logos.length; li++) {
-    const logo = CONFIG.logos[li];
-    const logoImg = getLogoImage(logo);
-    const logoReady = isLogoReady(logo);
-
-    // Parallax position
-    let logoY;
-    const logoPxDur = logo.parallaxDuration || 3000;
-    const logoStartY = H * (logo.parallaxStartY ?? -0.3);
-    const logoEndY = H * logo.yPosition;
-    if (logo.parallax && elapsed < logoPxDur) {
-      const pProgress = easeOutCubic(elapsed / logoPxDur);
-      logoY = logoStartY + (logoEndY - logoStartY) * pProgress;
-    } else if (logo.parallax && elapsed > TOTAL_DURATION - logoPxDur) {
-      const pProgress = easeOutCubic((TOTAL_DURATION - elapsed) / logoPxDur);
-      logoY = logoStartY + (logoEndY - logoStartY) * pProgress;
-    } else {
-      logoY = logoEndY;
-    }
-
-    // Alpha
-    const fadeInNorm = (logo.fadeInTime || 960) / TOTAL_DURATION;
-    const fadeOutNorm = (logo.fadeOutTime || 800) / TOTAL_DURATION;
-    const logoFadeOutStart = 1.0 - fadeOutNorm - 0.04;
-    let logoAlpha = 0;
-    if (t >= 0.04 && t < (1.0 - 0.04)) {
-      const rT = Math.min(1, (t - 0.04) / fadeInNorm);
-      logoAlpha = easeOutExpo(rT);
-      if (t > logoFadeOutStart) logoAlpha *= Math.max(0, ((1.0 - 0.04) - t) / fadeOutNorm);
-    }
-    logoAlpha *= masterAlpha;
-
-    if (!logoReady || logoAlpha <= 0) continue;
-
-    const targetW = W * logo.size;
-    const aspect = logoImg.naturalWidth / logoImg.naturalHeight;
-    const drawW = targetW;
-    const drawH = drawW / aspect;
-
-    // Pulsing ghost (only for first logo)
-    if (li === 0 && CONFIG.pulsingLogo.enabled && logoAlpha > 0
-        && elapsed > CONFIG.pulsingLogo.startTime && elapsed < TOTAL_DURATION - logoPxDur) {
-      const pulseEndTime = TOTAL_DURATION - logoPxDur;
-      const beatDuration = 60 / CONFIG.global.bpm;
-      const totalTime = (timestamp - (startTime || 0)) / 1000;
-      const beatPhase = (totalTime / beatDuration) % 1;
-      const pulseScale = 1 + beatPhase * (CONFIG.pulsingLogo.maxScale - 1);
-      let pulseFade = 1;
-      if (elapsed > pulseEndTime - 2000) pulseFade = Math.max(0, (pulseEndTime - elapsed) / 2000);
-      const pulseAlpha = logoAlpha * CONFIG.pulsingLogo.opacity * Math.pow(1 - beatPhase, 1.5) * pulseFade;
-
-      if (pulseAlpha > 0.01) {
-        const pulseImg = pulsingLogoImg || logoImg;
-        const pulseAspect = pulseImg.naturalWidth / pulseImg.naturalHeight;
-        const pDrawW = pulsingLogoImg ? targetW : drawW;
-        const pDrawH = pulsingLogoImg ? pDrawW / pulseAspect : drawH;
-        ctx.save();
-        ctx.translate(W / 2, H * CONFIG.pulsingLogo.yPosition);
-        ctx.scale(pulseScale, pulseScale);
-        ctx.globalAlpha = pulseAlpha;
-        ctx.drawImage(pulseImg, -pDrawW / 2, -pDrawH / 2, pDrawW, pDrawH);
-        ctx.restore();
-      }
-    }
-
-    // Spectrum (drawn before first logo only)
-    if (li === 0 && CONFIG.spectrum.enabled !== false) {
-      const specH = CONFIG.spectrum.height;
-      const specX = 30, specW = W - 60;
-      const specY = H - specH - CONFIG.spectrum.bottomOffset;
-      drawSpectrumAnalyser(ctx, specX, specY, specW, specH, instrAlpha * 0.9);
-    }
-
-    // Solid logo
-    ctx.save();
-    ctx.translate(W / 2, logoY);
-    ctx.globalAlpha = logoAlpha;
-    ctx.drawImage(logoImg, -drawW / 2, -drawH / 2, drawW, drawH);
-    ctx.restore();
-  }
-
-  // If no logos exist, still draw spectrum
-  if (CONFIG.logos.length === 0 && CONFIG.spectrum.enabled !== false) {
+  spectrum: function(s) {
+    if (CONFIG.spectrum.enabled === false) return;
     const specH = CONFIG.spectrum.height;
     const specX = 30, specW = W - 60;
     const specY = H - specH - CONFIG.spectrum.bottomOffset;
-    drawSpectrumAnalyser(ctx, specX, specY, specW, specH, instrAlpha * 0.9);
-  }
+    drawSpectrumAnalyser(ctx, specX, specY, specW, specH, s.instrAlpha * 0.9);
+  },
 
-  // --- TEXT BOXES (unified loop) ---
-  for (const tb of CONFIG.textBoxes) {
-    if (elapsed >= tb.fadeInTime) {
-      const tbFadeStart = tb.fadeInTime / TOTAL_DURATION;
-      const tbFadeDur = 1500 / TOTAL_DURATION;
-      const tbFadeOutStart = 1.0 - tbFadeDur - 0.04;
-      let tbAlpha = Math.min(1, (t - tbFadeStart) / tbFadeDur);
-      if (t > tbFadeOutStart) tbAlpha *= Math.max(0, ((1.0 - 0.04) - t) / tbFadeDur);
-      drawTextBox(ctx, tbAlpha, tb);
+  logos: function(s) {
+    for (let li = 0; li < CONFIG.logos.length; li++) {
+      const logo = CONFIG.logos[li];
+      const logoImg = getLogoImage(logo);
+      const logoReady = isLogoReady(logo);
+
+      let logoY;
+      const logoPxDur = logo.parallaxDuration || 3000;
+      const logoStartY = H * (logo.parallaxStartY ?? -0.3);
+      const logoEndY = H * logo.yPosition;
+      if (logo.parallax && s.elapsed < logoPxDur) {
+        const pProgress = easeOutCubic(s.elapsed / logoPxDur);
+        logoY = logoStartY + (logoEndY - logoStartY) * pProgress;
+      } else if (logo.parallax && s.elapsed > s.TOTAL_DURATION - logoPxDur) {
+        const pProgress = easeOutCubic((s.TOTAL_DURATION - s.elapsed) / logoPxDur);
+        logoY = logoStartY + (logoEndY - logoStartY) * pProgress;
+      } else {
+        logoY = logoEndY;
+      }
+
+      const fadeInNorm = (logo.fadeInTime || 960) / s.TOTAL_DURATION;
+      const fadeOutNorm = (logo.fadeOutTime || 800) / s.TOTAL_DURATION;
+      const logoFadeOutStart = 1.0 - fadeOutNorm - 0.04;
+      let logoAlpha = 0;
+      if (s.t >= 0.04 && s.t < (1.0 - 0.04)) {
+        const rT = Math.min(1, (s.t - 0.04) / fadeInNorm);
+        logoAlpha = easeOutExpo(rT);
+        if (s.t > logoFadeOutStart) logoAlpha *= Math.max(0, ((1.0 - 0.04) - s.t) / fadeOutNorm);
+      }
+      logoAlpha *= s.masterAlpha;
+
+      if (!logoReady || logoAlpha <= 0) continue;
+
+      const targetW = W * logo.size;
+      const aspect = logoImg.naturalWidth / logoImg.naturalHeight;
+      const drawW = targetW;
+      const drawH = drawW / aspect;
+
+      if (li === 0 && CONFIG.pulsingLogo.enabled && logoAlpha > 0
+          && s.elapsed > CONFIG.pulsingLogo.startTime && s.elapsed < s.TOTAL_DURATION - logoPxDur) {
+        const pulseEndTime = s.TOTAL_DURATION - logoPxDur;
+        const beatDuration = 60 / CONFIG.global.bpm;
+        const totalTime = (s.timestamp - (startTime || 0)) / 1000;
+        const beatPhase = (totalTime / beatDuration) % 1;
+        const pulseScale = 1 + beatPhase * (CONFIG.pulsingLogo.maxScale - 1);
+        let pulseFade = 1;
+        if (s.elapsed > pulseEndTime - 2000) pulseFade = Math.max(0, (pulseEndTime - s.elapsed) / 2000);
+        const pulseAlpha = logoAlpha * CONFIG.pulsingLogo.opacity * Math.pow(1 - beatPhase, 1.5) * pulseFade;
+
+        if (pulseAlpha > 0.01) {
+          const pulseImg = pulsingLogoImg || logoImg;
+          const pulseAspect = pulseImg.naturalWidth / pulseImg.naturalHeight;
+          const pDrawW = pulsingLogoImg ? targetW : drawW;
+          const pDrawH = pulsingLogoImg ? pDrawW / pulseAspect : drawH;
+          ctx.save();
+          ctx.translate(W / 2, H * CONFIG.pulsingLogo.yPosition);
+          ctx.scale(pulseScale, pulseScale);
+          ctx.globalAlpha = pulseAlpha;
+          ctx.drawImage(pulseImg, -pDrawW / 2, -pDrawH / 2, pDrawW, pDrawH);
+          ctx.restore();
+        }
+      }
+
+      ctx.save();
+      ctx.translate(W / 2, logoY);
+      ctx.globalAlpha = logoAlpha;
+      ctx.drawImage(logoImg, -drawW / 2, -drawH / 2, drawW, drawH);
+      ctx.restore();
     }
-  }
+  },
 
-  // --- WAVEFORM (top layer) ---
-  if (CONFIG.waveform.enabled !== false) {
+  textBoxes: function(s) {
+    for (const tb of CONFIG.textBoxes) {
+      if (s.elapsed >= tb.fadeInTime) {
+        const tbFadeStart = tb.fadeInTime / s.TOTAL_DURATION;
+        const tbFadeDur = 1500 / s.TOTAL_DURATION;
+        const tbFadeOutStart = 1.0 - tbFadeDur - 0.04;
+        let tbAlpha = Math.min(1, (s.t - tbFadeStart) / tbFadeDur);
+        if (s.t > tbFadeOutStart) tbAlpha *= Math.max(0, ((1.0 - 0.04) - s.t) / tbFadeDur);
+        drawTextBox(ctx, tbAlpha, tb);
+      }
+    }
+  },
+
+  waveform: function(s) {
+    if (CONFIG.waveform.enabled === false) return;
     const waveH = CONFIG.waveform.height;
     const waveX = 30, waveY = H * CONFIG.waveform.yCenter - waveH / 2, waveW = W - 60;
-    drawWaveform(ctx, waveX, waveY, waveW, waveH, instrAlpha * 0.85, audio);
+    drawWaveform(ctx, waveX, waveY, waveW, waveH, s.instrAlpha * 0.85, s.audio);
+  }
+};
+
+// --- MAIN RENDER ---
+function render(timestamp) {
+  if (!startTime) startTime = timestamp;
+  const TOTAL_DURATION = CONFIG.global.duration;
+  const elapsed = (timestamp - startTime) % TOTAL_DURATION;
+  const t = elapsed / TOTAL_DURATION;
+
+  const audio = getAudioData(timestamp - (startTime || 0));
+  updateSmoothed(audio);
+
+  if (t < 0.02) particles = [];
+
+  // Background (always first)
+  ctx.fillStyle = CONFIG.global.bgColor || '#000000';
+  ctx.fillRect(0, 0, W, H);
+
+  if (bgImg) {
+    const imgAspect = bgImg.naturalWidth / bgImg.naturalHeight;
+    const canvasAspect = W / H;
+    let drawW, drawH, drawX, drawY;
+    if (imgAspect > canvasAspect) {
+      drawH = H; drawW = H * imgAspect; drawX = (W - drawW) / 2; drawY = 0;
+    } else {
+      drawW = W; drawH = W / imgAspect; drawX = 0; drawY = (H - drawH) / 2;
+    }
+    ctx.drawImage(bgImg, drawX, drawY, drawW, drawH);
   }
 
-  // --- BORDER ---
+  const primaryLogo = CONFIG.logos[0];
+  const pxDur = primaryLogo ? primaryLogo.parallaxDuration : 3000;
+
+  const fadeIn = 0.05, fadeOut = 0.05;
+  let masterAlpha = 1;
+  if (t < fadeIn) masterAlpha = t / fadeIn;
+  else if (t > 1.0 - fadeOut) masterAlpha = (1.0 - t) / fadeOut;
+
+  let instrAlpha = 0;
+  if (t > 0.04 && t < 0.96) {
+    instrAlpha = t < 0.10 ? (t - 0.04) / 0.06 : (t > 0.90 ? (0.96 - t) / 0.06 : 1);
+  }
+  instrAlpha *= masterAlpha;
+
+  const state = { t, elapsed, masterAlpha, instrAlpha, audio, timestamp, primaryLogo, pxDur, TOTAL_DURATION };
+
+  // Configurable layer order
+  const order = CONFIG.layerOrder || DEFAULT_LAYER_ORDER;
+  for (const layerName of order) {
+    if (LAYER_RENDERERS[layerName]) LAYER_RENDERERS[layerName](state);
+  }
+
+  // Border (always last)
   drawBorder(ctx, canvas);
 
   // --- ELEMENT LABELS (debug overlay) ---

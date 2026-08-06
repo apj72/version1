@@ -327,6 +327,35 @@
     line-height: 1.5;
   }
 
+  /* Layer Order */
+  .layer-order-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    margin-bottom: 2px;
+    background: #222;
+    border: 1px solid #333;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: grab;
+  }
+  .layer-order-item:active { cursor: grabbing; }
+  .layer-order-item .layer-name { flex: 1; }
+  .layer-order-item .btn-layer-move {
+    background: none;
+    border: 1px solid #444;
+    color: #aaa;
+    cursor: pointer;
+    padding: 2px 6px;
+    margin-left: 4px;
+    border-radius: 3px;
+    font-size: 11px;
+    line-height: 1;
+  }
+  .layer-order-item .btn-layer-move:hover { background: #333; color: #fff; }
+  .layer-order-item .btn-layer-move:disabled { opacity: 0.3; cursor: default; }
+  .layer-order-item.drag-over { border-color: #E8423F; background: #2a1a1a; }
+
   /* Presets */
   .presets-bar {
     margin-bottom: 20px;
@@ -867,6 +896,117 @@
       </div>
     </div>
   </div>
+
+  <!-- VIDEO SLICE -->
+  <div class="section collapsed">
+    <div class="section-header">Video Slice</div>
+    <div class="section-body">
+      <div class="field">
+        <label>Video File</label>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="file" id="videoslice-file" accept="video/*" style="display:none;">
+          <button onclick="document.getElementById('videoslice-file').click()" style="padding:4px 12px; background:#333; border:1px solid #555; border-radius:4px; color:#ccc; cursor:pointer; font-size:12px;">Upload Video</button>
+          <span id="videoslice-filename" style="font-size:12px; color:#888;">No video</span>
+          <button id="videoslice-clear" style="display:none; padding:4px 8px; background:#333; border:1px solid #555; border-radius:4px; color:#E8423F; cursor:pointer; font-size:12px;">Clear</button>
+        </div>
+      </div>
+      <div class="field">
+        <input type="checkbox" id="videoslice-enabled">
+        <span class="checkbox-label">Enabled</span>
+      </div>
+      <div id="videoslice-options" style="display:none;">
+        <div class="field">
+          <label>Orientation</label>
+          <select id="videoslice-orientation" style="width:100%; padding:6px 10px; background:#222; border:1px solid #444; border-radius:4px; color:#eee;">
+            <option value="horizontal">Horizontal</option>
+            <option value="vertical">Vertical</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Thickness (px)</label>
+          <input type="range" id="videoslice-thickness" min="10" max="800" step="10" value="200">
+          <span class="range-value" id="videoslice-thickness-val">200</span>
+        </div>
+        <div class="field">
+          <label id="videoslice-position-label">Y Position</label>
+          <input type="range" id="videoslice-position" min="0" max="1" step="0.01" value="0.50">
+          <span class="range-value" id="videoslice-position-val">0.50</span>
+        </div>
+        <div class="field">
+          <label>Video Pan</label>
+          <input type="range" id="videoslice-videoPan" min="0" max="1" step="0.01" value="0.50">
+          <span class="range-value" id="videoslice-videoPan-val">0.50</span>
+        </div>
+        <div class="field">
+          <label>Opacity</label>
+          <input type="range" id="videoslice-opacity" min="0" max="1" step="0.05" value="1.00">
+          <span class="range-value" id="videoslice-opacity-val">1.00</span>
+        </div>
+        <div class="field">
+          <label>Fade In Time (ms)</label>
+          <input type="number" id="videoslice-fadeInTime" value="2000" min="0" max="30000" step="100">
+        </div>
+        <div class="field">
+          <label>Fade Out Time (ms)</label>
+          <input type="number" id="videoslice-fadeOutTime" value="14000" min="0" max="30000" step="100">
+        </div>
+        <div class="field">
+          <label>Fade Duration (ms)</label>
+          <input type="number" id="videoslice-fadeDuration" value="1000" min="100" max="5000" step="100">
+        </div>
+        <div class="field">
+          <label>Slide In</label>
+          <select id="videoslice-slideIn" style="width:100%; padding:6px 10px; background:#222; border:1px solid #444; border-radius:4px; color:#eee;">
+            <option value="none">None</option>
+            <option value="top">Top</option>
+            <option value="bottom">Bottom</option>
+            <option value="left">Left</option>
+            <option value="right">Right</option>
+          </select>
+        </div>
+        <div id="videoslice-slideIn-options" style="display:none;">
+          <div class="field">
+            <label>Slide In Time (ms)</label>
+            <input type="number" id="videoslice-slideInTime" value="2000" min="0" max="30000" step="100">
+          </div>
+          <div class="field">
+            <label>Slide In Duration (ms)</label>
+            <input type="number" id="videoslice-slideInDuration" value="1000" min="100" max="5000" step="100">
+          </div>
+        </div>
+        <div class="field">
+          <label>Slide Out</label>
+          <select id="videoslice-slideOut" style="width:100%; padding:6px 10px; background:#222; border:1px solid #444; border-radius:4px; color:#eee;">
+            <option value="none">None</option>
+            <option value="top">Top</option>
+            <option value="bottom">Bottom</option>
+            <option value="left">Left</option>
+            <option value="right">Right</option>
+          </select>
+        </div>
+        <div id="videoslice-slideOut-options" style="display:none;">
+          <div class="field">
+            <label>Slide Out Time (ms)</label>
+            <input type="number" id="videoslice-slideOutTime" value="14000" min="0" max="30000" step="100">
+          </div>
+          <div class="field">
+            <label>Slide Out Duration (ms)</label>
+            <input type="number" id="videoslice-slideOutDuration" value="1000" min="100" max="5000" step="100">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LAYER ORDER -->
+  <div class="section collapsed">
+    <div class="section-header">Layer Order</div>
+    <div class="section-body">
+      <p style="font-size:11px; color:#888; margin-bottom:10px;">Drag layers to reorder. Items higher in the list are drawn first (behind).</p>
+      <div id="layer-order-list"></div>
+      <button id="btn-reset-layer-order" style="margin-top:8px; padding:4px 12px; background:#333; border:1px solid #555; border-radius:4px; color:#ccc; cursor:pointer; font-size:12px;">Reset to Default</button>
+    </div>
+  </div>
 </div>
 
 <div id="preview-area" style="position: relative;">
@@ -1405,6 +1545,159 @@ function escapeAttr(s) {
   return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// ===== LAYER ORDER =====
+const DEFAULT_LAYER_ORDER = [
+  'grid', 'bgLogos', 'videoSlice', 'sweeps', 'glitch',
+  'scanlines', 'particles', 'vignette', 'cornerAccents',
+  'spectrum', 'logos', 'textBoxes', 'waveform'
+];
+
+const LAYER_DISPLAY_NAMES = {
+  grid: 'Grid', bgLogos: 'BG Logos', videoSlice: 'Video Slice',
+  sweeps: 'Sweeps', glitch: 'Glitch', scanlines: 'Scanlines',
+  particles: 'Particles', vignette: 'Vignette', cornerAccents: 'Corner Accents',
+  spectrum: 'Spectrum', logos: 'Logos', textBoxes: 'Text Boxes', waveform: 'Waveform'
+};
+
+function buildLayerOrderList(order) {
+  const container = document.getElementById('layer-order-list');
+  container.innerHTML = '';
+  order.forEach((layerKey, idx) => {
+    const item = document.createElement('div');
+    item.className = 'layer-order-item';
+    item.dataset.layer = layerKey;
+    item.draggable = true;
+    item.innerHTML = '<span class="layer-name">' + (LAYER_DISPLAY_NAMES[layerKey] || layerKey) + '</span>' +
+      '<button class="btn-layer-move btn-up" title="Move up">▲</button>' +
+      '<button class="btn-layer-move btn-down" title="Move down">▼</button>';
+    container.appendChild(item);
+  });
+  updateLayerButtons();
+  attachLayerDragHandlers();
+}
+
+function updateLayerButtons() {
+  const items = document.querySelectorAll('#layer-order-list .layer-order-item');
+  items.forEach((item, idx) => {
+    item.querySelector('.btn-up').disabled = idx === 0;
+    item.querySelector('.btn-down').disabled = idx === items.length - 1;
+  });
+}
+
+function attachLayerDragHandlers() {
+  const container = document.getElementById('layer-order-list');
+  let dragItem = null;
+
+  container.querySelectorAll('.layer-order-item').forEach(item => {
+    item.addEventListener('dragstart', (e) => {
+      dragItem = item;
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(() => item.style.opacity = '0.4', 0);
+    });
+    item.addEventListener('dragend', () => {
+      item.style.opacity = '';
+      container.querySelectorAll('.layer-order-item').forEach(i => i.classList.remove('drag-over'));
+      dragItem = null;
+      updateLayerButtons();
+    });
+    item.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      item.classList.add('drag-over');
+    });
+    item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+    item.addEventListener('drop', (e) => {
+      e.preventDefault();
+      item.classList.remove('drag-over');
+      if (dragItem && dragItem !== item) {
+        const allItems = [...container.querySelectorAll('.layer-order-item')];
+        const fromIdx = allItems.indexOf(dragItem);
+        const toIdx = allItems.indexOf(item);
+        if (fromIdx < toIdx) {
+          item.after(dragItem);
+        } else {
+          item.before(dragItem);
+        }
+      }
+    });
+
+    item.querySelector('.btn-up').addEventListener('click', () => {
+      const prev = item.previousElementSibling;
+      if (prev) prev.before(item);
+      updateLayerButtons();
+    });
+    item.querySelector('.btn-down').addEventListener('click', () => {
+      const next = item.nextElementSibling;
+      if (next) next.after(item);
+      updateLayerButtons();
+    });
+  });
+}
+
+function gatherLayerOrder() {
+  return [...document.querySelectorAll('#layer-order-list .layer-order-item')]
+    .map(item => item.dataset.layer);
+}
+
+document.getElementById('btn-reset-layer-order').addEventListener('click', () => {
+  buildLayerOrderList(DEFAULT_LAYER_ORDER);
+});
+
+// ===== VIDEO SLICE =====
+let sliceVideoData = null;
+
+document.getElementById('videoslice-file').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    sliceVideoData = reader.result;
+    document.getElementById('videoslice-filename').textContent = file.name;
+    document.getElementById('videoslice-clear').style.display = '';
+    const iframe = document.getElementById('preview');
+    iframe.contentWindow.postMessage({ type: 'LOAD_SLICE_VIDEO', dataUrl: reader.result }, '*');
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('videoslice-clear').addEventListener('click', () => {
+  sliceVideoData = null;
+  document.getElementById('videoslice-filename').textContent = 'No video';
+  document.getElementById('videoslice-clear').style.display = 'none';
+  document.getElementById('videoslice-file').value = '';
+  const iframe = document.getElementById('preview');
+  iframe.contentWindow.postMessage({ type: 'LOAD_SLICE_VIDEO', dataUrl: null }, '*');
+});
+
+document.getElementById('videoslice-enabled').addEventListener('change', (e) => {
+  document.getElementById('videoslice-options').style.display = e.target.checked ? '' : 'none';
+});
+
+document.getElementById('videoslice-orientation').addEventListener('change', (e) => {
+  document.getElementById('videoslice-position-label').textContent =
+    e.target.value === 'horizontal' ? 'Y Position' : 'X Position';
+});
+
+document.getElementById('videoslice-slideIn').addEventListener('change', (e) => {
+  document.getElementById('videoslice-slideIn-options').style.display =
+    e.target.value !== 'none' ? '' : 'none';
+});
+
+document.getElementById('videoslice-slideOut').addEventListener('change', (e) => {
+  document.getElementById('videoslice-slideOut-options').style.display =
+    e.target.value !== 'none' ? '' : 'none';
+});
+
+['videoslice-thickness', 'videoslice-position', 'videoslice-videoPan', 'videoslice-opacity'].forEach(id => {
+  const el = document.getElementById(id);
+  const valSpan = document.getElementById(id + '-val');
+  if (el && valSpan) {
+    el.addEventListener('input', () => {
+      valSpan.textContent = parseFloat(el.value).toFixed(id === 'videoslice-thickness' ? 0 : 2);
+    });
+  }
+});
+
 // ===== BACKGROUND IMAGE =====
 document.getElementById('global-bgImage').addEventListener('change', (e) => {
   const file = e.target.files[0];
@@ -1476,6 +1769,24 @@ function gatherConfig() {
       cornerRadius: parseInt(document.getElementById('border-cornerRadius').value),
       inset: parseInt(document.getElementById('border-inset').value),
       outerBlur: parseInt(document.getElementById('border-outerBlur').value)
+    },
+    layerOrder: gatherLayerOrder(),
+    videoSlice: {
+      enabled: document.getElementById('videoslice-enabled').checked,
+      orientation: document.getElementById('videoslice-orientation').value,
+      thickness: parseInt(document.getElementById('videoslice-thickness').value),
+      position: parseFloat(document.getElementById('videoslice-position').value),
+      videoPan: parseFloat(document.getElementById('videoslice-videoPan').value),
+      opacity: parseFloat(document.getElementById('videoslice-opacity').value),
+      fadeInTime: parseInt(document.getElementById('videoslice-fadeInTime').value),
+      fadeOutTime: parseInt(document.getElementById('videoslice-fadeOutTime').value),
+      fadeDuration: parseInt(document.getElementById('videoslice-fadeDuration').value),
+      slideIn: document.getElementById('videoslice-slideIn').value,
+      slideOut: document.getElementById('videoslice-slideOut').value,
+      slideInTime: parseInt(document.getElementById('videoslice-slideInTime').value),
+      slideInDuration: parseInt(document.getElementById('videoslice-slideInDuration').value),
+      slideOutTime: parseInt(document.getElementById('videoslice-slideOutTime').value),
+      slideOutDuration: parseInt(document.getElementById('videoslice-slideOutDuration').value)
     }
   };
 }
@@ -1501,6 +1812,10 @@ function sendConfig() {
       iframe.contentWindow.postMessage({ type: 'LOAD_BGLOGO_IMAGE', index: idx, dataUrl: bg.imageData }, '*');
     }
   });
+  // Send slice video
+  if (sliceVideoData) {
+    iframe.contentWindow.postMessage({ type: 'LOAD_SLICE_VIDEO', dataUrl: sliceVideoData }, '*');
+  }
   // Send custom fonts
   Object.keys(customFonts).forEach(key => {
     const fontName = 'CustomTB_' + key.replace('tb_', '');
@@ -1723,6 +2038,35 @@ function applyConfigToForm(c) {
     document.getElementById('border-options').style.display = c.border.enabled ? '' : 'none';
   }
 
+  // Video Slice
+  if (c.videoSlice) {
+    document.getElementById('videoslice-enabled').checked = c.videoSlice.enabled || false;
+    document.getElementById('videoslice-orientation').value = c.videoSlice.orientation || 'horizontal';
+    document.getElementById('videoslice-thickness').value = c.videoSlice.thickness || 200;
+    document.getElementById('videoslice-position').value = c.videoSlice.position != null ? c.videoSlice.position : 0.5;
+    document.getElementById('videoslice-videoPan').value = c.videoSlice.videoPan != null ? c.videoSlice.videoPan : 0.5;
+    document.getElementById('videoslice-opacity').value = c.videoSlice.opacity != null ? c.videoSlice.opacity : 1;
+    document.getElementById('videoslice-fadeInTime').value = c.videoSlice.fadeInTime || 2000;
+    document.getElementById('videoslice-fadeOutTime').value = c.videoSlice.fadeOutTime || 14000;
+    document.getElementById('videoslice-fadeDuration').value = c.videoSlice.fadeDuration || 1000;
+    document.getElementById('videoslice-slideIn').value = c.videoSlice.slideIn || 'none';
+    document.getElementById('videoslice-slideOut').value = c.videoSlice.slideOut || 'none';
+    document.getElementById('videoslice-slideInTime').value = c.videoSlice.slideInTime || 2000;
+    document.getElementById('videoslice-slideInDuration').value = c.videoSlice.slideInDuration || 1000;
+    document.getElementById('videoslice-slideOutTime').value = c.videoSlice.slideOutTime || 14000;
+    document.getElementById('videoslice-slideOutDuration').value = c.videoSlice.slideOutDuration || 1000;
+    document.getElementById('videoslice-options').style.display = c.videoSlice.enabled ? '' : 'none';
+    document.getElementById('videoslice-position-label').textContent =
+      c.videoSlice.orientation === 'vertical' ? 'X Position' : 'Y Position';
+    document.getElementById('videoslice-slideIn-options').style.display =
+      (c.videoSlice.slideIn && c.videoSlice.slideIn !== 'none') ? '' : 'none';
+    document.getElementById('videoslice-slideOut-options').style.display =
+      (c.videoSlice.slideOut && c.videoSlice.slideOut !== 'none') ? '' : 'none';
+  }
+
+  // Layer Order
+  buildLayerOrderList(c.layerOrder || DEFAULT_LAYER_ORDER);
+
   // Refresh range value displays for static controls
   document.querySelectorAll('#sidebar > .section input[type="range"]').forEach(range => {
     const valSpan = document.getElementById(range.id + '-val');
@@ -1755,7 +2099,9 @@ function getFactoryConfig() {
     waveform: { enabled: true, yCenter: 0.61, height: 1200, lineWidth: 6 },
     bgLogos: DEFAULT_BGLOGOS,
     effects: { glitch: true, scanlines: true, grid: true, sweeps: true, cornerAccents: true, vignette: true },
-    border: { enabled: false, thickness: 4, color: '#E8423F', cornerRadius: 0, inset: 40, outerBlur: 0 }
+    border: { enabled: false, thickness: 4, color: '#E8423F', cornerRadius: 0, inset: 40, outerBlur: 0 },
+    layerOrder: DEFAULT_LAYER_ORDER.slice(),
+    videoSlice: { enabled: false, orientation: 'horizontal', thickness: 200, position: 0.5, videoPan: 0.5, opacity: 1.0, fadeInTime: 2000, fadeOutTime: 14000, fadeDuration: 1000, slideIn: 'none', slideOut: 'none', slideInTime: 2000, slideInDuration: 1000, slideOutTime: 14000, slideOutDuration: 1000 }
   };
 }
 
@@ -2037,6 +2383,7 @@ document.getElementById('btn-confirm-no').addEventListener('click', () => {
     (factory.logos || DEFAULT_LOGOS).forEach((logo, idx) => createLogoPanel(logo, idx === 0));
     (factory.textBoxes || DEFAULT_TEXTBOXES).forEach(tb => createTextBoxPanel(tb));
     (factory.bgLogos || DEFAULT_BGLOGOS).forEach(bg => createBgLogoPanel(bg));
+    buildLayerOrderList(factory.layerOrder || DEFAULT_LAYER_ORDER);
   }
 })();
 </script>
