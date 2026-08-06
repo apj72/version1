@@ -830,6 +830,43 @@
       </div>
     </div>
   </div>
+
+  <!-- BORDER -->
+  <div class="section collapsed">
+    <div class="section-header">Border</div>
+    <div class="section-body">
+      <div class="field">
+        <input type="checkbox" id="border-enabled">
+        <span class="checkbox-label">Enabled</span>
+      </div>
+      <div id="border-options" style="display:none;">
+        <div class="field">
+          <label>Thickness (px)</label>
+          <input type="range" id="border-thickness" min="1" max="20" step="1" value="4">
+          <span class="range-value" id="border-thickness-val">4</span>
+        </div>
+        <div class="field">
+          <label>Colour</label>
+          <input type="color" id="border-color" value="#E8423F">
+        </div>
+        <div class="field">
+          <label>Corner Radius (px)</label>
+          <input type="range" id="border-cornerRadius" min="0" max="100" step="1" value="0">
+          <span class="range-value" id="border-cornerRadius-val">0</span>
+        </div>
+        <div class="field">
+          <label>Inset (px)</label>
+          <input type="range" id="border-inset" min="0" max="200" step="1" value="40">
+          <span class="range-value" id="border-inset-val">40</span>
+        </div>
+        <div class="field">
+          <label>Outer Blur (px)</label>
+          <input type="range" id="border-outerBlur" min="0" max="50" step="1" value="0">
+          <span class="range-value" id="border-outerBlur-val">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div id="preview-area" style="position: relative;">
@@ -844,6 +881,7 @@
   <div id="button-bar">
     <button id="btn-update">Update Preview</button>
     <button id="btn-download">Download HTML</button>
+    <button id="btn-capture">Capture Image</button>
     <div id="record-controls">
       <label>Loops:</label>
       <input type="number" id="record-loops" value="1" min="1" max="10" step="1">
@@ -923,6 +961,11 @@ document.getElementById('pulsingLogo-imageClear').addEventListener('click', () =
   document.getElementById('pulsingLogo-image').value = '';
 });
 
+// Border enabled toggle
+document.getElementById('border-enabled').addEventListener('change', function() {
+  document.getElementById('border-options').style.display = this.checked ? '' : 'none';
+});
+
 // ===== DYNAMIC PANEL: TEXT BOXES =====
 let textBoxIdCounter = 0;
 
@@ -983,6 +1026,11 @@ function createTextBoxPanel(config) {
       '<div class="field"><label>Font Size</label><input type="range" data-field="fontSize" min="40" max="300" step="5" value="' + (config.fontSize || 80) + '"><span class="range-value">' + (config.fontSize || 80) + '</span></div>' +
       '<div class="field"><label>Fade In Time (ms)</label><input type="number" data-field="fadeInTime" value="' + (config.fadeInTime || 5000) + '" min="0" max="30000" step="500"></div>' +
       '<div class="field"><div class="color-row"><label>Text Colour</label><input type="color" data-field="textColor" value="' + (config.textColor || '#FFFFFF') + '"></div></div>' +
+      '<div class="field"><input type="checkbox" data-field="bgEnabled"' + (config.bgEnabled ? ' checked' : '') + '><span class="checkbox-label">Background</span></div>' +
+      '<div class="bg-fields" style="' + (config.bgEnabled ? '' : 'display:none;') + '">' +
+        '<div class="field"><div class="color-row"><label>BG Colour</label><input type="color" data-field="bgColor" value="' + (config.bgColor || '#000000') + '"></div></div>' +
+        '<div class="field"><label>BG Opacity</label><input type="range" data-field="bgOpacity" min="0" max="1" step="0.05" value="' + (config.bgOpacity != null ? config.bgOpacity : 0.5) + '"><span class="range-value">' + (config.bgOpacity != null ? config.bgOpacity : 0.5).toFixed(2) + '</span></div>' +
+      '</div>' +
       '<div class="field"><input type="checkbox" data-field="border"' + (config.border ? ' checked' : '') + '><span class="checkbox-label">Border</span></div>' +
       '<div class="border-fields" style="' + (config.border ? '' : 'display:none;') + '">' +
         '<div class="field"><label>Border Width (px)</label><input type="number" data-field="borderWidth" value="' + (config.borderWidth || 3) + '" min="1" max="10" step="1"></div>' +
@@ -990,6 +1038,13 @@ function createTextBoxPanel(config) {
         '<div class="field"><label>Corner Radius (px)</label><input type="number" data-field="cornerRadius" value="' + (config.cornerRadius || 12) + '" min="0" max="40" step="2"></div>' +
       '</div>' +
     '</div>';
+
+  // Background toggle
+  const bgCheck = panel.querySelector('[data-field="bgEnabled"]');
+  const bgFields = panel.querySelector('.bg-fields');
+  bgCheck.addEventListener('change', () => {
+    bgFields.style.display = bgCheck.checked ? '' : 'none';
+  });
 
   // Border toggle
   const borderCheck = panel.querySelector('[data-field="border"]');
@@ -1067,6 +1122,9 @@ function gatherTextBoxes() {
       fontSize: parseInt(get('fontSize').value),
       fadeInTime: parseInt(get('fadeInTime').value),
       fontFamily: fontFamily,
+      bgEnabled: get('bgEnabled').checked,
+      bgColor: get('bgColor').value,
+      bgOpacity: parseFloat(get('bgOpacity').value),
       border: get('border').checked,
       borderWidth: parseInt(get('borderWidth').value),
       borderColor: get('borderColor').value,
@@ -1410,6 +1468,14 @@ function gatherConfig() {
       sweeps: document.getElementById('effects-sweeps').checked,
       cornerAccents: document.getElementById('effects-cornerAccents').checked,
       vignette: document.getElementById('effects-vignette').checked
+    },
+    border: {
+      enabled: document.getElementById('border-enabled').checked,
+      thickness: parseInt(document.getElementById('border-thickness').value),
+      color: document.getElementById('border-color').value,
+      cornerRadius: parseInt(document.getElementById('border-cornerRadius').value),
+      inset: parseInt(document.getElementById('border-inset').value),
+      outerBlur: parseInt(document.getElementById('border-outerBlur').value)
     }
   };
 }
@@ -1646,6 +1712,17 @@ function applyConfigToForm(c) {
     document.getElementById('effects-vignette').checked = c.effects.vignette !== false;
   }
 
+  // Border
+  if (c.border) {
+    document.getElementById('border-enabled').checked = c.border.enabled || false;
+    document.getElementById('border-thickness').value = c.border.thickness || 4;
+    document.getElementById('border-color').value = c.border.color || '#E8423F';
+    document.getElementById('border-cornerRadius').value = c.border.cornerRadius || 0;
+    document.getElementById('border-inset').value = c.border.inset != null ? c.border.inset : 40;
+    document.getElementById('border-outerBlur').value = c.border.outerBlur || 0;
+    document.getElementById('border-options').style.display = c.border.enabled ? '' : 'none';
+  }
+
   // Refresh range value displays for static controls
   document.querySelectorAll('#sidebar > .section input[type="range"]').forEach(range => {
     const valSpan = document.getElementById(range.id + '-val');
@@ -1656,7 +1733,19 @@ function applyConfigToForm(c) {
 // ===== SAVE AS DEFAULT =====
 const DEFAULTS_KEY = 'version1_defaults';
 
+let factoryConfigCache = null;
+
+async function loadFactoryConfig() {
+  try {
+    const resp = await fetch('default_config.json');
+    factoryConfigCache = await resp.json();
+  } catch (e) {
+    console.warn('Could not load default_config.json, using built-in defaults');
+  }
+}
+
 function getFactoryConfig() {
+  if (factoryConfigCache) return JSON.parse(JSON.stringify(factoryConfigCache));
   return {
     global: { duration: 16000, bpm: 124, bgColor: '#000000', bgImageData: null },
     logos: DEFAULT_LOGOS,
@@ -1665,7 +1754,8 @@ function getFactoryConfig() {
     spectrum: { enabled: true, height: 900, bottomOffset: 40, barCount: 32 },
     waveform: { enabled: true, yCenter: 0.61, height: 1200, lineWidth: 6 },
     bgLogos: DEFAULT_BGLOGOS,
-    effects: { glitch: true, scanlines: true, grid: true, sweeps: true, cornerAccents: true, vignette: true }
+    effects: { glitch: true, scanlines: true, grid: true, sweeps: true, cornerAccents: true, vignette: true },
+    border: { enabled: false, thickness: 4, color: '#E8423F', cornerRadius: 0, inset: 40, outerBlur: 0 }
   };
 }
 
@@ -1715,6 +1805,12 @@ document.getElementById('btn-download').addEventListener('click', async () => {
   } catch (err) {
     alert('Could not generate download. Make sure version1_animation_v5.html is in the same folder.');
   }
+});
+
+// ===== CAPTURE IMAGE =====
+document.getElementById('btn-capture').addEventListener('click', () => {
+  const iframe = document.getElementById('preview');
+  iframe.contentWindow.postMessage({ type: 'CAPTURE_IMAGE' }, '*');
 });
 
 // ===== VIDEO RECORDING =====
@@ -1783,6 +1879,15 @@ window.addEventListener('message', (e) => {
     overlay.classList.remove('active');
     document.getElementById('btn-record').disabled = false;
     alert(e.data.error || 'Recording failed.');
+  }
+
+  if (e.data.type === 'CAPTURE_IMAGE_RESULT') {
+    const a = document.createElement('a');
+    a.href = e.data.dataUrl;
+    a.download = 'version1_capture.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 
   if (e.data.type === 'RECORDING_COMPLETE') {
@@ -1913,24 +2018,27 @@ document.getElementById('btn-confirm-no').addEventListener('click', () => {
 });
 
 // ===== INIT =====
-refreshPresetList();
+(async function init() {
+  await loadFactoryConfig();
+  refreshPresetList();
 
-// Load saved defaults or factory defaults
-let savedDefaults = null;
-try {
-  const stored = localStorage.getItem(DEFAULTS_KEY);
-  if (stored) savedDefaults = JSON.parse(stored);
-} catch (e) {}
+  let savedDefaults = null;
+  try {
+    const stored = localStorage.getItem(DEFAULTS_KEY);
+    if (stored) savedDefaults = JSON.parse(stored);
+  } catch (e) {}
 
-if (savedDefaults) {
-  applyConfigToForm(savedDefaults);
-  const iframe = document.getElementById('preview');
-  iframe.addEventListener('load', () => sendConfig(), { once: true });
-} else {
-  DEFAULT_LOGOS.forEach((logo, idx) => createLogoPanel(logo, idx === 0));
-  DEFAULT_TEXTBOXES.forEach(tb => createTextBoxPanel(tb));
-  DEFAULT_BGLOGOS.forEach(bg => createBgLogoPanel(bg));
-}
+  if (savedDefaults) {
+    applyConfigToForm(savedDefaults);
+    const iframe = document.getElementById('preview');
+    iframe.addEventListener('load', () => sendConfig(), { once: true });
+  } else {
+    const factory = getFactoryConfig();
+    (factory.logos || DEFAULT_LOGOS).forEach((logo, idx) => createLogoPanel(logo, idx === 0));
+    (factory.textBoxes || DEFAULT_TEXTBOXES).forEach(tb => createTextBoxPanel(tb));
+    (factory.bgLogos || DEFAULT_BGLOGOS).forEach(bg => createBgLogoPanel(bg));
+  }
+})();
 </script>
 </body>
 </html>

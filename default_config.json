@@ -1,0 +1,101 @@
+{
+  "global": {
+    "duration": 16000,
+    "bpm": 124,
+    "bgColor": "#000000",
+    "bgImageData": null
+  },
+  "logos": [
+    {
+      "imageData": null,
+      "yPosition": 0.5,
+      "size": 0.82,
+      "fadeInTime": 960,
+      "fadeOutTime": 800,
+      "parallax": true,
+      "parallaxStartY": -0.3,
+      "parallaxDuration": 3000
+    }
+  ],
+  "pulsingLogo": {
+    "enabled": true,
+    "yPosition": 0.34,
+    "startTime": 10000,
+    "opacity": 0.85,
+    "maxScale": 2.0
+  },
+  "textBoxes": [
+    {
+      "text": "DJ's moss_b & TonyT",
+      "yPosition": 0.72,
+      "fontSize": 120,
+      "fadeInTime": 5000,
+      "fontFamily": "\"Bungee\", \"Arial Black\", sans-serif",
+      "bgEnabled": false,
+      "bgColor": "#000000",
+      "bgOpacity": 0.5,
+      "border": false,
+      "borderWidth": 3,
+      "borderColor": "#E8423F",
+      "cornerRadius": 12,
+      "paddingX": 40,
+      "paddingY": 20,
+      "textColor": "#FFFFFF"
+    },
+    {
+      "text": "NEXT EVENT: SAT 9PM",
+      "yPosition": 0.88,
+      "fontSize": 80,
+      "fadeInTime": 7000,
+      "fontFamily": "\"Bungee\", \"Arial Black\", sans-serif",
+      "bgEnabled": false,
+      "bgColor": "#000000",
+      "bgOpacity": 0.5,
+      "border": true,
+      "borderWidth": 3,
+      "borderColor": "#E8423F",
+      "cornerRadius": 12,
+      "paddingX": 40,
+      "paddingY": 20,
+      "textColor": "#FFFFFF"
+    }
+  ],
+  "spectrum": {
+    "enabled": true,
+    "height": 900,
+    "bottomOffset": 40,
+    "barCount": 32
+  },
+  "waveform": {
+    "enabled": true,
+    "yCenter": 0.61,
+    "height": 1200,
+    "lineWidth": 6
+  },
+  "bgLogos": [
+    { "scale": 2.2, "y": 0.10, "speed": 0.10, "clockDir": 9, "opacity": 0.30 },
+    { "scale": 1.4, "y": 0.22, "speed": 0.16, "clockDir": 3, "opacity": 0.20 },
+    { "scale": 0.8, "y": 0.30, "speed": 0.22, "clockDir": 9, "opacity": 0.15 },
+    { "scale": 2.5, "y": 0.55, "speed": 0.07, "clockDir": 3, "opacity": 0.35 },
+    { "scale": 1.0, "y": 0.65, "speed": 0.19, "clockDir": 9, "opacity": 0.18 },
+    { "scale": 1.8, "y": 0.78, "speed": 0.13, "clockDir": 3, "opacity": 0.28 },
+    { "scale": 0.6, "y": 0.88, "speed": 0.25, "clockDir": 9, "opacity": 0.12 },
+    { "scale": 3.0, "y": 0.45, "speed": 0.05, "clockDir": 9, "opacity": 0.22 }
+  ],
+  "effects": {
+    "glitch": true,
+    "scanlines": true,
+    "grid": true,
+    "sweeps": true,
+    "cornerAccents": true,
+    "vignette": true
+  },
+  "border": {
+    "enabled": false,
+    "thickness": 4,
+    "color": "#E8423F",
+    "cornerRadius": 0,
+    "inset": 40,
+    "outerBlur": 0
+  }
+}

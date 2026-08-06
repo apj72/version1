@@ -117,6 +117,14 @@ const CONFIG = {
     sweeps: true,
     cornerAccents: true,
     vignette: true
+  },
+  border: {
+    enabled: false,
+    thickness: 4,
+    color: '#E8423F',
+    cornerRadius: 0,
+    inset: 40,
+    outerBlur: 0
   }
 };
 
@@ -128,6 +136,7 @@ window.addEventListener('message', (e) => {
     Object.assign(CONFIG.spectrum, e.data.config.spectrum || {});
     Object.assign(CONFIG.waveform, e.data.config.waveform || {});
     Object.assign(CONFIG.effects, e.data.config.effects || {});
+    Object.assign(CONFIG.border, e.data.config.border || {});
     if (e.data.config.logos) CONFIG.logos = e.data.config.logos;
     if (e.data.config.textBoxes) CONFIG.textBoxes = e.data.config.textBoxes;
     if (e.data.config.bgLogos) CONFIG.bgLogos = e.data.config.bgLogos;
@@ -158,6 +167,10 @@ window.addEventListener('message', (e) => {
   }
   if (e.data.type === 'LOAD_PULSING_LOGO_IMAGE') {
     loadPulsingLogoImage(e.data.dataUrl);
+  }
+  if (e.data.type === 'CAPTURE_IMAGE') {
+    const dataUrl = canvas.toDataURL('image/png');
+    window.parent.postMessage({ type: 'CAPTURE_IMAGE_RESULT', dataUrl }, '*');
   }
   if (e.data.type === 'SHOW_LABELS') {
     showLabels = true;
@@ -397,6 +410,10 @@ const W = 1080, H = 1920;
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 
+const offCanvas = document.createElement('canvas');
+offCanvas.width = W; offCanvas.height = H;
+const offCtx = offCanvas.getContext('2d');
+
 function resize() {
   const scale = Math.min(window.innerWidth / W, window.innerHeight / H);
   canvas.width = W;
@@ -573,10 +590,9 @@ function drawTextBox(ctx, alpha, tb) {
   ctx.textBaseline = 'middle';
   ctx.letterSpacing = Math.round(fontSize * 0.06) + 'px';
 
-  if (tb.border) {
+  if (tb.bgEnabled || tb.border) {
     const padX = tb.paddingX || 40;
     const padY = tb.paddingY || 20;
-    const borderW = tb.borderWidth || 3;
     const radius = tb.cornerRadius || 12;
 
     let maxWidth = 0;
@@ -590,11 +606,24 @@ function drawTextBox(ctx, alpha, tb) {
     const boxX = (W - boxW) / 2;
     const boxY = y - boxH / 2;
 
-    ctx.strokeStyle = tb.borderColor || RED;
-    ctx.lineWidth = borderW;
-    ctx.beginPath();
-    ctx.roundRect(boxX, boxY, boxW, boxH, radius);
-    ctx.stroke();
+    if (tb.bgEnabled) {
+      const bgOpacity = tb.bgOpacity != null ? tb.bgOpacity : 0.5;
+      ctx.save();
+      ctx.globalAlpha = alpha * bgOpacity;
+      ctx.fillStyle = tb.bgColor || '#000000';
+      ctx.beginPath();
+      ctx.roundRect(boxX, boxY, boxW, boxH, radius);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    if (tb.border) {
+      ctx.strokeStyle = tb.borderColor || RED;
+      ctx.lineWidth = tb.borderWidth || 3;
+      ctx.beginPath();
+      ctx.roundRect(boxX, boxY, boxW, boxH, radius);
+      ctx.stroke();
+    }
   }
 
   ctx.fillStyle = tb.textColor || WHITE;
@@ -692,6 +721,31 @@ function drawSweep(ctx, progress, y, height) {
 function easeOutExpo(t) { return t === 1 ? 1 : 1 - Math.pow(2, -10*t); }
 function easeOutBack(t) { const c = 1.7; return 1 + (c+1)*Math.pow(t-1,3) + c*Math.pow(t-1,2); }
 function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+function drawBorder(ctx, canvas) {
+  const b = CONFIG.border;
+  if (!b || !b.enabled) return;
+  const inset = b.inset || 40;
+  const radius = b.cornerRadius || 0;
+  const bw = b.thickness || 4;
+  if (b.outerBlur > 0) {
+    offCtx.clearRect(0, 0, W, H);
+    offCtx.drawImage(canvas, 0, 0);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, W, H);
+    ctx.roundRect(inset, inset, W - 2 * inset, H - 2 * inset, radius);
+    ctx.clip('evenodd');
+    ctx.filter = 'blur(' + b.outerBlur + 'px)';
+    ctx.drawImage(offCanvas, 0, 0);
+    ctx.restore();
+  }
+  ctx.strokeStyle = b.color || '#E8423F';
+  ctx.lineWidth = bw;
+  ctx.beginPath();
+  ctx.roundRect(inset, inset, W - 2 * inset, H - 2 * inset, radius);
+  ctx.stroke();
+}
 
 // --- MAIN RENDER ---
 function render(timestamp) {
@@ -985,6 +1039,9 @@ function render(timestamp) {
     const waveX = 30, waveY = H * CONFIG.waveform.yCenter - waveH / 2, waveW = W - 60;
     drawWaveform(ctx, waveX, waveY, waveW, waveH, instrAlpha * 0.85, audio);
   }
+
+  // --- BORDER ---
+  drawBorder(ctx, canvas);
 
   // --- ELEMENT LABELS (debug overlay) ---
   if (showLabels) {
